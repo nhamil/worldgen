@@ -1,38 +1,20 @@
 #pragma once 
 
 #include "Fjord/Common.h" 
-#include "Fjord/GUI/Container.h" 
-#include "Fjord/GUI/GUIRenderer.h" 
+#include "Fjord/GUI/GUIElement.h" 
 
-namespace Fjord 
+namespace Fjord
 {
-
-    class Panel : public Container 
+    
+    class Panel : public GUIElement 
     {
     public: 
-        Panel(int x, int y, int w, int h) 
-            : Container(x, y, w, h) {} 
-        virtual ~Panel() = default; 
+        static const int DefaultWidth = 300; 
+        static const int DefaultHeight = 300; 
 
-        virtual void OnRender(GUIRenderer* r) override 
-        {
-            r->SetColor(GetColor()); 
-            r->FillRect(GetGlobalX(), GetGlobalY(), GetWidth(), GetHeight()); 
-        }            
+        Panel() : GUIElement(DefaultWidth, DefaultHeight) {} 
+        Panel(int w, int h) : GUIElement(w, h) {}  
+        virtual ~Panel() = default; 
     };
 
-    class DragPanel : public Panel 
-    {
-    public: 
-        DragPanel(int x, int y, int w, int h) 
-            : Panel(x, y, w, h) {} 
-        virtual ~DragPanel() = default; 
-
-        virtual void OnMouseEvent(GUIMouseEvent& e) override; 
-        virtual void OnMouseMoveEvent(GUIMouseMoveEvent& e) override; 
-
-    private: 
-        bool DragMode_ = false; 
-    }; 
-
-}
+} 

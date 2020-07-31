@@ -3,19 +3,15 @@
 #include "Fjord/Core/Window.h" 
 #include "Fjord/GUI/GUIRenderer.h" 
 
+#include "Fjord/Graphics/Graphics.h" 
+
 namespace Fjord 
 {
 
-    GUIElement::GUIElement(int x, int y, int w, int h) 
-        : Alignment_(Alignment::TopLeft)
-        , Color_(Color::Fuchsia)
-        , ZOrder_(DefaultZOrder)
-        , X_(x) 
-        , Y_(y) 
+    GUIElement::GUIElement(int w, int h) 
+        : Color_(Color::Fuchsia)
         , Width_(w) 
-        , Height_(h)
-        , GlobalX_(x) 
-        , GlobalY_(y) {}
+        , Height_(h) {}
 
     GUIElement::~GUIElement() {}
 
@@ -31,30 +27,93 @@ namespace Fjord
         Height_ = h; 
     }
 
-    void GUIElement::SetZOrder(int z) 
-    {
-        ZOrder_ = z; 
-    }
-
     void GUIElement::SetColor(const Color& c) 
     {
         Color_ = c; 
     }
 
-    void GUIElement::SetAlignment(Alignment a) 
+    void GUIElement::SetFont(Font* font) 
     {
-        Alignment_ = a; 
+        Font_ = font; 
     }
 
-    void GUIElement::Update(float dt) 
+    void GUIElement::SetLayout(Layout* layout) 
     {
-        ComputeBounds(); 
+        Layout_ = layout; 
+    }
+
+    void GUIElement::AddChild(GUIElement* child) 
+    {
+        FJ_EASSERT(child); 
+
+        if (child->Parent_ == this) return; 
+
+        if (child->Parent_) 
+        {
+            FJ_EFDEBUG("removing parent"); 
+            child->Parent_->RemoveChild(child); 
+        }
+
+        child->Parent_ = this; 
+        Children_.push_back(child); 
+    }
+
+    bool GUIElement::RemoveChild(GUIElement* child) 
+    {
+        FJ_EASSERT(child); 
+
+        if (child->Parent_ != this) return false; 
+
+        for (auto it = Children_.begin(); it != Children_.end(); it++) 
+        {
+            if (*it == child) 
+            {
+                FJ_EFDEBUG("found child"); 
+                Children_.erase(it); 
+                return true; 
+            }
+        }
+
+        // if child's parent is this object, it should be in children list 
+        FJ_EASSERT(false); 
+        return false; 
+    }
+
+    void GUIElement::HandleUpdate(float dt) 
+    {
+        for (auto child : Children_) 
+        {
+            child->HandleUpdate(dt); 
+        }
+
+        UpdateLayout(); 
+
         OnUpdate(dt); 
     }
 
-    void GUIElement::Render(GUIRenderer* r) 
+    void GUIElement::HandleRender(GUIRenderer& r) 
     {
+        UpdateLayout(); 
+
         OnRender(r); 
+
+        // reverse order to show elements at start of list on top 
+        for (auto it = Children_.rbegin(); it != Children_.rend(); it++) 
+        {
+            Ref<GUIElement> child = *it; 
+            r.Push(
+                child->GetX(), 
+                child->GetY(), 
+                child->GetWidth(), 
+                child->GetHeight(), 
+                true
+            ); 
+            r.SetColor(child->GetColor()); 
+            r.SetFont(child->GetFont()); 
+            child->HandleRender(r); 
+
+            r.Pop(); 
+        }
     }
 
     void GUIElement::OnUpdate(float dt) 
@@ -62,37 +121,91 @@ namespace Fjord
         (void) dt; 
     }
 
-    void GUIElement::OnRender(GUIRenderer* r) 
+    void GUIElement::OnRender(GUIRenderer& r) 
     {
-        r->SetColor(GetColor()); 
-        r->FillRect(GetGlobalX(), GetGlobalY(), GetWidth(), GetHeight()); 
+        r.SetColor(GetColor()); 
+        r.FillRect(0, 0, GetWidth(), GetHeight()); 
     }
 
     bool GUIElement::InBounds(int gx, int gy) 
     {
-        if (gx < GetGlobalX() || gx > GetGlobalX() + GetWidth()) return false; 
-        if (gy < GetGlobalY() || gy > GetGlobalY() + GetHeight()) return false; 
+        if (gx < 0 || gx > GetWidth()) return false; 
+        if (gy < 0 || gy > GetHeight()) return false; 
         return true; 
     }
 
     void GUIElement::HandleMouseEvent(GUIMouseEvent& e)
     { 
-        OnMouseEvent(e); 
+        for (auto child : Children_) 
+        {
+            if (e.IsAvailable()) 
+            {
+                auto e2 = e.Create(-child->GetX(), -child->GetY()); 
+                child->HandleMouseEvent(e2); 
+                if (e2.IsConsumed()) e.Consume(); 
+            }
+            else 
+            {
+                break; 
+            }
+        }
+
+        if (e.IsAvailable()) OnMouseEvent(e); 
     } 
 
     void GUIElement::HandleMouseMoveEvent(GUIMouseMoveEvent& e)
     { 
-        OnMouseMoveEvent(e); 
+        for (auto child : Children_) 
+        {
+            if (e.IsAvailable()) 
+            {
+                auto e2 = e.Create(-child->GetX(), -child->GetY()); 
+                child->HandleMouseMoveEvent(e2); 
+                if (e2.IsConsumed()) e.Consume(); 
+            }
+            else 
+            {
+                break; 
+            }
+        }
+
+        if (e.IsAvailable()) OnMouseMoveEvent(e); 
     } 
 
     void GUIElement::HandleMouseWheelEvent(GUIMouseWheelEvent& e)
     { 
-        OnMouseWheelEvent(e); 
+        for (auto child : Children_) 
+        {
+            if (e.IsAvailable()) 
+            {
+                auto e2 = e.Create(-child->GetX(), -child->GetY()); 
+                child->HandleMouseWheelEvent(e2); 
+                if (e2.IsConsumed()) e.Consume(); 
+            }
+            else 
+            {
+                break; 
+            }
+        }
+
+        if (e.IsAvailable()) OnMouseWheelEvent(e); 
     } 
 
     void GUIElement::HandleKeyEvent(GUIKeyEvent& e)
     { 
-        OnKeyEvent(e); 
+        for (auto child : Children_) 
+        {
+            if (e.IsAvailable()) 
+            {
+                child->HandleKeyEvent(e); 
+            }
+            else 
+            {
+                break; 
+            }
+        }
+
+        if (e.IsAvailable()) OnKeyEvent(e); 
     } 
 
     void GUIElement::OnMouseEvent(GUIMouseEvent& e)
@@ -121,47 +234,14 @@ namespace Fjord
         (void) e; 
     } 
 
-    void GUIElement::ComputeBounds() 
+    void GUIElement::UpdateLayout() 
     {
-        GUIElement* p = GetParent(); 
-        auto window = GetWindow(); 
-
-        int gLeft = p ? p->GetGlobalX() : 0; 
-        int gRight = p ? (gLeft + p->GetWidth()) : window->GetWidth(); 
-
-        int gTop = p ? p->GetGlobalY() : 0; 
-        int gBot = p ? (gTop + p->GetHeight()) : window->GetHeight(); 
-
-        int x, y; 
-
-        if (IsAlignmentTop(Alignment_)) 
+        for (auto child : Children_) 
         {
-            y = gTop + GetY(); 
-        }
-        else if (IsAlignmentBottom(Alignment_)) 
-        {
-            y = gBot - GetY() - GetHeight(); 
-        }
-        else // center 
-        {
-            y = (gTop + gBot) / 2 + GetY() - GetHeight() / 2; 
+            child->UpdateLayout(); 
         }
 
-        if (IsAlignmentLeft(Alignment_)) 
-        {
-            x = gLeft + GetX(); 
-        }
-        else if (IsAlignmentRight(Alignment_)) 
-        {
-            x = gRight - GetX() - GetWidth(); 
-        }
-        else // center 
-        {
-            x = (gLeft + gRight) / 2 + GetX() - GetWidth() / 2; 
-        }
-
-        GlobalX_ = x; 
-        GlobalY_ = y; 
+        if (Layout_) Layout_->Apply(this); 
     }
 
 }

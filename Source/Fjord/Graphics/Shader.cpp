@@ -6,6 +6,8 @@
 namespace Fjord 
 {
 
+    static Vector<String> s_Prefixes({"Shaders/"});
+
     const int ATTRIBUTE_INDEX[(unsigned) Attribute::count] =
     {
         0, 1, 2, 3, 4, 5, 6 
@@ -50,8 +52,8 @@ namespace Fjord
     Shader* Shader::Load(const String& file) 
     {
         return new Shader(
-            ReadFile(file + ".vs"), 
-            ReadFile(file + ".fs") 
+            ReadFile(FindPath(file + ".vs", &s_Prefixes)), 
+            ReadFile(FindPath(file + ".fs", &s_Prefixes)) 
         );
     }
 

@@ -1,6 +1,7 @@
 #include "Fjord/Graphics/Texture2D.h"
 
 #include "Fjord/Graphics/OpenGL.h" 
+#include "Fjord/Util/FileUtil.h" 
 #include "Fjord/Util/Memory.h" 
 
 #define STB_IMAGE_IMPLEMENTATION 
@@ -91,8 +92,12 @@ namespace Fjord
         }
     }
 
-    Texture2D* Texture2D::Load(const String& file) 
+    static Vector<String> s_Prefixes({"Textures/"}); 
+    static Vector<String> s_Suffixes({".png", ".jpg", ".jpeg"}); 
+
+    Texture2D* Texture2D::Load(const String& filename) 
     {
+        String file = FindPath(filename, &s_Prefixes, &s_Suffixes); 
         int width, height, channels; 
         uint8* img = stbi_load(file.c_str(), &width, &height, &channels, 4); 
 

@@ -51,7 +51,7 @@ namespace Fjord
         double frames = time; 
         double skipFrames = 1.0 / 60.0; 
 
-        GUIRenderer* guiRenderer = new GUIRenderer(); 
+        GUIRenderer guiRenderer; 
 
         while (g_Running) 
         {
@@ -62,19 +62,25 @@ namespace Fjord
                 ups++; 
 
                 g_Window->Poll(); 
-                g_GUI->Update(skipUpdates); 
+                g_GUI->HandleUpdate(skipUpdates); 
                 app->Update(skipUpdates); 
             }
 
-            // if (frames < TimeSeconds()) 
+            // if (frames < GetTimeSeconds()) 
             {
                 frames += skipFrames; 
                 fps++; 
 
+                g_Graphics->ResetViewport(); 
+                g_Graphics->ResetClip(); 
+
                 app->Render(); 
                 g_Graphics->Clear(false, true); 
-                g_GUI->Render(guiRenderer); 
-                guiRenderer->Flush(); 
+                g_GUI->HandleRender(guiRenderer); 
+                guiRenderer.Flush(); 
+
+                g_Graphics->ResetViewport(); 
+                g_Graphics->ResetClip(); 
                 
                 g_Window->SwapBuffers(); 
             }
@@ -90,10 +96,8 @@ namespace Fjord
 
             // double delay = (updates - TimeSeconds()) * 1000; 
             // Sleep(1); //std::max(0.0, std::min(1.0, delay)));
-            Sleep(1); 
+            // Sleep(1); 
         }
-
-        delete guiRenderer; 
 
         app->Stop();  
 

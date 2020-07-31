@@ -17,23 +17,39 @@ namespace Fjord
         unsigned int TextureY; 
     };
 
+    struct StringMetrics 
+    {
+        float PxWidth = 0; 
+        float PxHeight = 0; 
+    };
+
     class Font : public RefCounted 
     {
     public: 
         Font(const String& file, float fontSize = 16); 
         ~Font(); 
 
+        const String& GetName() const { return FontName_; } 
+
         Texture2D* GetTexture() const; 
 
         float GetSize() const { return FontSize_; } 
 
         const Glyph* GetGlyph(unsigned c) const; 
-        int GetKerning(unsigned c1, unsigned c2) const; 
+
+        StringMetrics GetMetrics(const char* str) const; 
+        StringMetrics GetMetrics(const String& str) const 
+        {
+            return GetMetrics(str.c_str()); 
+        }
 
     private: 
         HashMap<unsigned, Glyph> Glyphs_; 
         Ref<Texture2D> Texture_; 
-        float FontSize_; 
+        float FontSize_{0}; 
+        float MaxGlyphHeight_{0}; 
+        float GlyphOffsetY_{0}; 
+        String FontName_{}; 
     };
 
 }

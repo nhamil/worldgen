@@ -2,32 +2,45 @@
 
 #include <Fjord/Util/Time.h> 
 
-#define PRIME_0 1214520721
-#define PRIME_1 3850096717
-#define PRIME_2 2152656683
-#define PRIME_3 4038220471
+#define PRIME_0 1214520721ULL
+#define PRIME_1 3850096717ULL
+#define PRIME_2 2152656683ULL
+#define PRIME_3 4038220471ULL
 
-#define PRIME_OFF 0xCBF29CE484222325ULL
-#define PRIME_MUL 0x100000001B3L 
+// #define PRIME_OFF 0xCBF29CE484222325ULL
+// #define PRIME_MUL 0x100000001B3ULL 
 
 struct ValNoiseCoords 
 {
     int seed, x, y, z; 
 };
 
+// inspired by libnoise 
 static float ValueNoise3Di(int x, int y, int z, int seed) 
 {
     // int res = PRIME_0 * (seed + PRIME_1 * (y + PRIME_2 * (z + PRIME_3 * x))); 
-    // return Clamp((float) (res & 0xFFFFFF) / (0xFFFFFF), 0.0f, 1.0f) * 2 - 1; 
-    ValNoiseCoords c = {seed, x, y, z}; 
-    uint64 hash = PRIME_OFF; 
-    char* data = (char*) &c; 
-    for (int i = 0; i < sizeof(c); i++) 
-    {
-        hash ^= data[i]; 
-        hash *= PRIME_MUL; 
-    }
-    float res = (double) hash / UINT64_MAX * 2 - 1; 
+    // return Clamp((float) (res & 0xFFFFFF) / (0xFFFFFF), 0.0f, 1.0f) * 2 - 1;
+
+    // ValNoiseCoords c = {seed, x, y, z}; 
+    // uint64 hash = PRIME_OFF; 
+    // char* data = (char*) &c; 
+    // for (int i = 0; i < sizeof(c); i++) 
+    // {
+    //     hash ^= data[i]; 
+    //     hash *= PRIME_MUL; 
+    // }
+
+    uint64 n = (
+        PRIME_0 * x + 
+        PRIME_1 * y + 
+        PRIME_2 * z + 
+        PRIME_3 * seed 
+    ); 
+    n = (n >> 13) ^ n; 
+    n = (n * (n * n * 169670299ULL + 51482759298437ULL) + 3347709955261254437ULL);// & 0x7fffffff; 
+
+    // float res = (double) hash / UINT64_MAX * 2 - 1; 
+    float res = (double) n / UINT64_MAX * 2 - 1; 
     return Clamp(res, -1.0, 1.0); 
 }
 
@@ -119,12 +132,12 @@ void BasicTerrainGenRule::Apply(World& world)
             world.SetTerrain(cell, Terrain::Mountain); 
             land++; 
         }
-        else if (height > 0.55) 
+        else if (height > 0.57) 
         {
             world.SetTerrain(cell, Terrain::Grassland); 
             land++; 
         }
-        else if (height > 0.54) 
+        else if (height > 0.55) 
         {
             world.SetTerrain(cell, Terrain::ShallowWater); 
             water++; 

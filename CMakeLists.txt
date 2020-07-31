@@ -37,10 +37,11 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Graphics/Texture2D.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/VertexBuffer.cpp 
 
-    ${FJORD_SOURCE_FOLDER}/GUI/Container.cpp 
+    ${FJORD_SOURCE_FOLDER}/GUI/Button.cpp 
+    ${FJORD_SOURCE_FOLDER}/GUI/Frame.cpp 
     ${FJORD_SOURCE_FOLDER}/GUI/GUIElement.cpp 
     ${FJORD_SOURCE_FOLDER}/GUI/GUIRenderer.cpp 
-    ${FJORD_SOURCE_FOLDER}/GUI/Panel.cpp 
+    ${FJORD_SOURCE_FOLDER}/GUI/Layout.cpp 
 
     ${FJORD_SOURCE_FOLDER}/Math/Math.cpp 
 

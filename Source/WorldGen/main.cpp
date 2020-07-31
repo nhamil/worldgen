@@ -12,10 +12,12 @@
 #include <Fjord/Graphics/SpriteBatch.h> 
 #include <Fjord/Graphics/Texture2D.h> 
 #include <Fjord/Graphics/VertexBuffer.h> 
-#include <Fjord/GUI/GUI.h> 
+#include <Fjord/GUI/Button.h> 
+#include <Fjord/GUI/Frame.h> 
 #include <Fjord/GUI/GUIElement.h> 
 #include <Fjord/GUI/GUIEnvironment.h> 
 #include <Fjord/GUI/GUIRenderer.h> 
+#include <Fjord/GUI/Layout.h> 
 #include <Fjord/GUI/Panel.h> 
 #include <Fjord/Util/ClassId.h> 
 #include <Fjord/Util/FileUtil.h> 
@@ -30,13 +32,6 @@
 using namespace Fjord; 
 using namespace std; 
 
-class Test
-{
-public: 
-    Test() { cout << "ctor" << endl; } 
-    ~Test()  {cout << "dtor" << endl; } 
-};
-
 class Main : public Application 
 {
 public: 
@@ -45,8 +40,6 @@ public:
         Random r; 
 
         FJ_FINFO("Application initializing..."); 
-
-        FJ_FDEBUG("Init Zoom = %f", Zoom); 
 
         CubeMesh = new Mesh(); 
 
@@ -102,35 +95,51 @@ public:
         CubeMesh->SetIndices(indexData); 
         CubeMesh->Update(); 
 
-        BasicShader = Shader::Load("../Assets/Shaders/Basic");
-        TextShader = Shader::Load("../Assets/Shaders/Text"); 
-        TestTexture = Texture2D::Load("../Assets/Textures/TestImage.png"); 
+        BasicShader = Shader::Load("Basic");
+        TextShader = Shader::Load("Text"); 
+        TestTexture = Texture2D::Load("TestImage"); 
 
-        MyFont = new Font("../Assets/Fonts/Monospace.ttf"); 
+        MyFont = new Font("Default", 22); 
 
         auto gui = GetGUI(); 
 
-        UI = new DragPanel(10, 10, 300, 200); 
-        UI->SetColor(Color::White); 
-        UI->SetAlignment(Alignment::BottomRight); 
+        // UI = new Frame(); 
+        // UI->SetSize(10 + (10 + Button::DefaultWidth) * 3, 20); 
+        // UI->SetPosition(50, 75); 
+        // UI->SetColor({0.0f, 0.0f, 0.5f}); 
 
-        GUIElement* testUI = new GUIElement(0, 10, 100, 40); 
-        testUI->SetColor(Color::Blue); 
-        testUI->SetAlignment(Alignment::Bottom); 
-        UI->AddChild(testUI); 
+        Ref<Frame> form = new Frame(); 
+        form->SetColor(Color::Blue); 
+        form->SetPosition(0, 20); 
+        form->SetSize(300, 300); 
+        // UI->AddChild(form); 
 
-        UI2 = new DragPanel(10, 10, 230, 60); 
-        UI2->SetAlignment(Alignment::BottomLeft); 
-        UI2->SetColor(Color::White); 
-        testUI = new GUIElement(10, 10, 100, 40); 
-        testUI->SetColor(Color::Blue); 
-        UI2->AddChild(testUI); 
-        testUI = new GUIElement(120, 10, 100, 40); 
-        testUI->SetColor(Color::Blue); 
-        UI2->AddChild(testUI); 
+        // form->SetSize(
+        //     10 + (10 + Button::DefaultWidth) * 1, 
+        //     10 + (10 + Button::DefaultHeight) * 3 
+        // );
+        {
+            for (int y = 0; y < 16; y++) 
+            {
+                for (int x = 0; x < 6; x++) 
+                {
+                    Button* btn = new Button(); 
+                    btn->SetColor({0.0f, 0.0f, 1.0f, 0.5f}); 
+                    btn->SetSize(50, 30); 
+                    btn->SetPosition(
+                        10 + (10 + 50) * x, 
+                        10 + (10 + 30) * y 
+                    );
+                    btn->SetFont(MyFont); 
+                    form->AddChild(btn); 
+                }
+            }
+        }
+
+        UI = form; 
+        // UI->SetLayout(new DefaultLayout()); 
 
         gui->AddChild(UI); 
-        gui->AddChild(UI2); 
 
         GenWorld(); 
 
@@ -229,7 +238,7 @@ public:
         info += "\n"; 
         info += "UPS: " + ToString((int) GetUPS()); 
         sb->DrawString(Color::Black, 16, info.c_str(), 10, 20); 
-        sb->Draw(TestTexture, 100, 200, 100, 100); 
+        // sb->Draw(TestTexture, 100, 200, 100, 100); 
         sb->End(); 
     }
 
@@ -238,51 +247,11 @@ public:
         Random r; 
 
         WorldGenerator gen; 
-        gen.AddRule(new SubdivideCellGenRule(4)); 
+        gen.AddRule(new SubdivideCellGenRule(5)); 
         gen.AddRule(new CellDistortRule()); 
         gen.AddRule(new CellRelaxRule(200)); 
         gen.AddRule(new BasicTerrainGenRule()); 
         World = gen.Generate();
-
-        // Sim = new FluidSim(FLUID_WIDTH, FLUID_HEIGHT); 
-        // FluidMesh = nullptr; 
-        // int done = 0; 
-        // for (int y = 0; y < FLUID_HEIGHT; y++) 
-        // {
-        //     for (int x = 0; x < FLUID_WIDTH; x++) 
-        //     {
-        //         GeoCoords gc = {
-        //             ((float) y / FLUID_HEIGHT) * -180 + 90, 
-        //             ((float) x / FLUID_WIDTH) * -360 + 180
-        //         };
-        //         // FJ_LOG(Debug, "gc %0.1f %0.1f", gc.Latitude, gc.Longitude); 
-        //         Vector3 pos = GetPositionFromGeoCoords(gc); 
-        //         // FJ_LOG(Debug, "pos %0.3f %0.3f %0.3f", pos.X, pos.Y, pos.Z); 
-        //         CellId cell = World.GetCellIdPyPosition(pos); 
-        //         if (!IsTerrainWater(World.GetTerrain(cell))) 
-        //         {
-        //             Sim->SetWall(x, y, true); 
-        //         }
-        //     }
-        //     // FJ_LOG(Debug, "%d", done++); 
-        // }
-
-        // for (int y = 0; y < Sim->GetHeight(); y++) 
-        // {
-        //     for (int x = 0; x < Sim->GetWidth(); x++) 
-        //     {
-        //         int index = x + Sim->GetWidth() * y; 
-        //         if (Sim->IsWall(x, y)) 
-        //         {
-        //             Sim->SetVelocity(x, y, {0, 0}); 
-        //         }
-        //         else 
-        //         {
-        //             Sim->SetVelocity(x, y, Normalized(Vector2(r.NextFloat(), r.NextFloat()))); 
-        //         }
-        //     }
-        // }
-
 
         FJ_LOG(Debug, 
             "Created world with %u cell and %u connections (%dkb, %0.1f seconds at 10MB/s)", 
@@ -435,7 +404,7 @@ public:
     class World World; 
     // gui 
     Ref<Font> MyFont; 
-    Ref<Panel> UI, UI2; 
+    Ref<GUIElement> UI, UI2; 
 }; 
 
 ENGINE_MAIN_CLASS(Main) 

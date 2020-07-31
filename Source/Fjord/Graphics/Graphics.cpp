@@ -1,5 +1,6 @@
 #include "Fjord/Graphics/Graphics.h" 
 
+#include "Fjord/Core/Window.h" 
 #include "Fjord/Graphics/Color.h" 
 #include "Fjord/Graphics/IndexBuffer.h" 
 #include "Fjord/Graphics/Geometry.h" 
@@ -29,11 +30,41 @@ namespace Fjord
         SetDepthTest(true); 
         GLCALL(glEnable(GL_BLEND));
         GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); 
+        GLCALL(glEnable(GL_SCISSOR_TEST)); 
     }
 
     Graphics::~Graphics() 
     {
         
+    }
+
+    void Graphics::SetViewport(int x, int y, int w, int h) 
+    {
+        auto* window = GetWindow(); 
+
+        FJ_EFWARN("SetViewport: (0,0) should be top left"); 
+        GLCALL(glViewport(x, y, w, h)); 
+    }
+
+    void Graphics::ResetViewport() 
+    {
+        auto* w = GetWindow(); 
+        GLCALL(glViewport(0, 0, w->GetWidth(), w->GetHeight())); 
+    }
+
+    void Graphics::SetClip(int x, int y, int w, int h) 
+    {
+        auto* window = GetWindow(); 
+        // GLCALL(glEnable(GL_SCISSOR_TEST)); 
+
+        GLCALL(glScissor(x, window->GetHeight() - y - h, w, h)); 
+    }
+
+    void Graphics::ResetClip() 
+    {
+        auto* window = GetWindow(); 
+        // GLCALL(glDisable(GL_SCISSOR_TEST)); 
+        GLCALL(glScissor(0, 0, window->GetWidth(), window->GetHeight())); 
     }
 
     void Graphics::ClearTextures() 

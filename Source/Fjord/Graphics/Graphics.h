@@ -20,6 +20,12 @@ namespace Fjord
 
         void SetDepthTest(bool enabled); 
 
+        void ResetViewport(); 
+        void SetViewport(int x, int y, int w, int h); 
+
+        void ResetClip(); 
+        void SetClip(int x, int y, int w, int h); 
+
         void SetPointSize(float size); 
         void SetLineWidth(float width); 
 

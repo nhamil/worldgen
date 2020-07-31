@@ -27,9 +27,9 @@ find_path(FREETYPE_INCLUDE_DIR
 
 # find FreeType library 
 find_library(FREETYPE_FREETYPE
-    NAMES freetype
+    NAMES freetype.a
     PATHS ${FREETYPE_SEARCH_PATHS} 
-    PATH_SUFFIXES objs lib lib64
+    PATH_SUFFIXES objs #lib lib64
 )
 
 # finish finding FreeType 

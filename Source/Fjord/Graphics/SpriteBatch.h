@@ -16,7 +16,7 @@ namespace Fjord
     class SpriteBatch : public RefCounted 
     {
     public: 
-        static const unsigned MaxSpriteCount = 1000; 
+        static const unsigned MaxSpriteCount = 10; 
 
         SpriteBatch(); 
         ~SpriteBatch(); 

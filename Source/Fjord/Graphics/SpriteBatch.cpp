@@ -314,7 +314,7 @@ namespace Fjord
             }
 
             float x0 = x + (glyph->BearingX - 2) * scale; 
-            float y0 = y - (glyph->BearingY - 2) * scale; 
+            float y0 = y - (glyph->BearingY + 2) * scale; 
             float x1 = x0 + (glyph->Width + 4) * scale; 
             float y1 = y0 + (glyph->Height + 4) * scale; 
 
@@ -353,6 +353,7 @@ namespace Fjord
             {(float) window->GetWidth(), 0, -1}
         )); 
         shader->SetTextureUnit("u_Texture", 0); 
+        shader->Update(); 
 
         graphics->SetShader(shader); 
         graphics->SetGeometry(Geometry_); 
@@ -376,7 +377,7 @@ namespace Fjord
 
         if (!DefaultFont_) 
         {
-            DefaultFont_ = new Font("../Assets/Fonts/Default.ttf", 32); 
+            DefaultFont_ = new Font("Default", 32); 
         }
 
         if (!WhiteTexture_) 

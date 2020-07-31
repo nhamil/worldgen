@@ -10,10 +10,13 @@
 namespace Fjord 
 {
 
+    static Vector<String> s_Prefixes({"Fonts/"}); 
+    static Vector<String> s_Suffixes({".ttf"}); 
+
     static bool s_FreeTypeInit = false; 
     static FT_Library s_FreeType; 
 
-    Font::Font(const String& file, float fontSize) 
+    Font::Font(const String& filename, float fontSize) 
         : FontSize_(fontSize) 
     {
         if (!s_FreeTypeInit) 
@@ -23,6 +26,10 @@ namespace Fjord
                 FJ_EFWARN("Could not initialize FreeType"); 
             }
         }
+
+        FontName_ = filename; 
+
+        String file = FindPath(filename, &s_Prefixes, &s_Suffixes); 
 
         FT_Face face; 
         if (FT_New_Face(s_FreeType, file.c_str(), 0, &face)) 
@@ -55,6 +62,8 @@ namespace Fjord
             if (width > maxWidth) maxWidth = width; 
             if (height > maxHeight) maxHeight = height; 
         }
+
+        MaxGlyphHeight_ = maxHeight; 
 
         unsigned numChars = 256; 
         unsigned maxPixels = (
@@ -112,6 +121,9 @@ namespace Fjord
         }
         Texture_->Update(); 
 
+        // TODO this is wrong 
+        GlyphOffsetY_ = 1 * (face->descender >> 6); 
+
         FT_Done_Face(face); 
     }
 
@@ -137,6 +149,46 @@ namespace Fjord
         {
             return nullptr; 
         }
+    }
+
+    StringMetrics Font::GetMetrics(const char* str) const 
+    {
+        StringMetrics sm; 
+
+        float x = 0, y = 0; 
+        float xMax = 0; 
+        float scale = 1.0f; 
+
+        unsigned len = strlen(str); 
+        for (unsigned i = 0; i < len; i++) 
+        {
+            if (str[i] == '\n') 
+            {
+                y += GetSize() * 1.1; 
+                if (x > xMax) xMax = x; 
+                x = 0; 
+                continue; 
+            }
+            const Glyph* glyph = GetGlyph(str[i]); 
+
+            if (!glyph) 
+            {
+                FJ_EFWARN("No glyph for '%c' (%d)", str[i], (int) str[i]); 
+                continue; 
+            }
+
+            // TODO will this make with be slightly longer that it should be 
+            //      same with y above 
+            x += glyph->Advance * scale; 
+        }
+
+        if (x > xMax) xMax = x; 
+        y += (MaxGlyphHeight_ + GlyphOffsetY_); 
+
+        sm.PxWidth = xMax; 
+        sm.PxHeight = y; 
+
+        return sm; 
     }
 
 }

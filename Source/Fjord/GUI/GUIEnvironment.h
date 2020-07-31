@@ -1,19 +1,19 @@
 #pragma once 
 
 #include "Fjord/Common.h" 
-#include "Fjord/GUI/Container.h" 
+#include "Fjord/GUI/GUIElement.h" 
 
 namespace Fjord 
 {
 
-    class GUIEnvironment : public Container 
+    class GUIEnvironment : public GUIElement 
     {
     public: 
         GUIEnvironment(int width, int height) 
-            : Container(0, 0, width, height) {} 
+            : GUIElement(width, height) {} 
         virtual ~GUIEnvironment() = default; 
 
-        virtual void OnRender(GUIRenderer* r) override { (void) r; } 
+        virtual void OnRender(GUIRenderer& r) override { (void) r; } 
 
         virtual void OnKeyEvent(GUIKeyEvent& e) { (void) e; } 
         virtual void OnMouseEvent(GUIMouseEvent& e) { (void) e; } 
