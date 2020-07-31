@@ -2,10 +2,11 @@
 
 #include "Fjord/Core/Application.h" 
 #include "Fjord/Core/Input.h" 
+#include "Fjord/Core/UI.h" 
 #include "Fjord/Core/Window.h" 
 #include "Fjord/Graphics/Graphics.h" 
-#include "Fjord/GUI/GUIEnvironment.h" 
-#include "Fjord/GUI/GUIRenderer.h" 
+// #include "Fjord/GUI/GUIEnvironment.h" 
+// #include "Fjord/GUI/GUIRenderer.h" 
 #include "Fjord/Util/Time.h" 
 #include "Fjord/Util/Thread.h" 
 
@@ -21,7 +22,7 @@ namespace Fjord
     static Graphics* g_Graphics = nullptr; 
     static Logger* g_Logger = nullptr; 
     static Logger* g_EngineLogger = nullptr; 
-    static GUIEnvironment* g_GUI = nullptr; 
+    // static GUIEnvironment* g_GUI = nullptr; 
 
     static bool g_Running = false; 
 
@@ -37,7 +38,7 @@ namespace Fjord
         g_Window = new Window("WorldGen", 900*4/3, 900); 
         g_Input = g_Window->GetInput(); 
         g_Graphics = new Graphics(); 
-        g_GUI = new GUIEnvironment(g_Window->GetWidth(), g_Window->GetHeight()); 
+        // g_GUI = new GUIEnvironment(g_Window->GetWidth(), g_Window->GetHeight()); 
 
         app->Init(); 
 
@@ -51,7 +52,7 @@ namespace Fjord
         double frames = time; 
         double skipFrames = 1.0 / 60.0; 
 
-        GUIRenderer guiRenderer; 
+        // GUIRenderer guiRenderer; 
 
         while (g_Running) 
         {
@@ -62,8 +63,15 @@ namespace Fjord
                 ups++; 
 
                 g_Window->Poll(); 
-                g_GUI->HandleUpdate(skipUpdates); 
+                // g_GUI->HandleUpdate(skipUpdates); 
+                UI::StartFrame(); 
+                app->UpdateGUI(skipUpdates); 
+                bool mouseDown = GetInput()->GetButton(1); 
+                // TODO quick hack to stop game from using mouse when UI is using it 
+                if (UI::HasActiveWidget()) GetInput()->OnMouseUp(1); 
                 app->Update(skipUpdates); 
+                if (mouseDown) GetInput()->OnMouseDown(1); 
+                UI::FinishFrame(); 
             }
 
             // if (frames < GetTimeSeconds()) 
@@ -76,8 +84,9 @@ namespace Fjord
 
                 app->Render(); 
                 g_Graphics->Clear(false, true); 
-                g_GUI->HandleRender(guiRenderer); 
-                guiRenderer.Flush(); 
+                UI::Render(); 
+                // g_GUI->HandleRender(guiRenderer); 
+                // guiRenderer.Flush(); 
 
                 g_Graphics->ResetViewport(); 
                 g_Graphics->ResetClip(); 
@@ -166,9 +175,9 @@ namespace Fjord
         return g_EngineLogger; 
     }
 
-    GUIEnvironment* GetGUI() 
-    {
-        return g_GUI; 
-    }
+    // GUIEnvironment* GetGUI() 
+    // {
+    //     return g_GUI; 
+    // }
 
 }

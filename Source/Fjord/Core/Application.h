@@ -15,6 +15,8 @@ namespace Fjord
 
         virtual void Start() {} 
 
+        virtual void UpdateGUI(float dt) { (void) dt; }
+
         virtual void Update(float dt) { (void) dt; } 
 
         virtual void Render() {} 

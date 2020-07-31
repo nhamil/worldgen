@@ -1,6 +1,7 @@
 #include <Fjord/Core/Entry.h> 
 #include <Fjord/Core/Input.h> 
 #include <Fjord/Core/Object.h> 
+#include <Fjord/Core/UI.h> 
 #include <Fjord/Math/MathUtil.h> 
 #include <Fjord/Math/Quaternion.h> 
 #include <Fjord/Graphics/Font.h> 
@@ -12,13 +13,14 @@
 #include <Fjord/Graphics/SpriteBatch.h> 
 #include <Fjord/Graphics/Texture2D.h> 
 #include <Fjord/Graphics/VertexBuffer.h> 
-#include <Fjord/GUI/Button.h> 
-#include <Fjord/GUI/Frame.h> 
-#include <Fjord/GUI/GUIElement.h> 
-#include <Fjord/GUI/GUIEnvironment.h> 
-#include <Fjord/GUI/GUIRenderer.h> 
-#include <Fjord/GUI/Layout.h> 
-#include <Fjord/GUI/Panel.h> 
+// #include <Fjord/GUI/Button.h> 
+// #include <Fjord/GUI/Frame.h> 
+// #include <Fjord/GUI/Widget.h> 
+// #include <Fjord/GUI/GUIEnvironment.h> 
+// #include <Fjord/GUI/GUIRenderer.h> 
+// #include <Fjord/GUI/Label.h> 
+// #include <Fjord/GUI/Layout.h> 
+// #include <Fjord/GUI/Panel.h> 
 #include <Fjord/Util/ClassId.h> 
 #include <Fjord/Util/FileUtil.h> 
 #include <Fjord/Util/Random.h> 
@@ -35,7 +37,7 @@ using namespace std;
 class Main : public Application 
 {
 public: 
-    virtual void Init() 
+    virtual void Init() override
     {
         Random r; 
 
@@ -99,59 +101,54 @@ public:
         TextShader = Shader::Load("Text"); 
         TestTexture = Texture2D::Load("TestImage"); 
 
-        MyFont = new Font("Default", 22); 
-
-        auto gui = GetGUI(); 
+        MyFont = new Font("Default"); 
 
         // UI = new Frame(); 
-        // UI->SetSize(10 + (10 + Button::DefaultWidth) * 3, 20); 
-        // UI->SetPosition(50, 75); 
-        // UI->SetColor({0.0f, 0.0f, 0.5f}); 
+        // UI->SetColor(Color::Blue); 
+        // UI->SetPosition(20, 20); 
+        // UI->SetSize(300, 300); 
 
-        Ref<Frame> form = new Frame(); 
-        form->SetColor(Color::Blue); 
-        form->SetPosition(0, 20); 
-        form->SetSize(300, 300); 
-        // UI->AddChild(form); 
+        // Label* label = new Label("Hello, Label!"); 
+        // label->SetSize(100, 30); 
+        // UI->AddChild(label); 
 
-        // form->SetSize(
-        //     10 + (10 + Button::DefaultWidth) * 1, 
-        //     10 + (10 + Button::DefaultHeight) * 3 
-        // );
-        {
-            for (int y = 0; y < 16; y++) 
-            {
-                for (int x = 0; x < 6; x++) 
-                {
-                    Button* btn = new Button(); 
-                    btn->SetColor({0.0f, 0.0f, 1.0f, 0.5f}); 
-                    btn->SetSize(50, 30); 
-                    btn->SetPosition(
-                        10 + (10 + 50) * x, 
-                        10 + (10 + 30) * y 
-                    );
-                    btn->SetFont(MyFont); 
-                    form->AddChild(btn); 
-                }
-            }
-        }
-
-        UI = form; 
-        // UI->SetLayout(new DefaultLayout()); 
-
-        gui->AddChild(UI); 
+        // Button* button = new Button("Button Time"); 
+        // button->SetPosition(100, 0); 
+        // button->SetSize(100, 30); 
+        // UI->AddChild(button); 
+        
+        
+        // GetGUI()->AddChild(UI); 
 
         GenWorld(); 
 
         FJ_FINFO("Done!"); 
     }
 
-    virtual void Stop() 
+    virtual void Stop() override
     {
         FJ_FINFO("Finished successfully"); 
     }
 
-    void Update(float dt) 
+    virtual void UpdateGUI(float dt) override
+    {
+        UI::BeginWindow("WorldGen", 20, 100, 120); 
+        if (UI::Button("Generate")) 
+        {
+            GenWorld(); 
+        }
+        if (UI::Button("My Button2")) 
+        {
+            FJ_FDEBUG("Pressed 2"); 
+        }
+        if (UI::Button("My Button3")) 
+        {
+            FJ_FDEBUG("Pressed 3"); 
+        }
+        UI::EndWindow(); 
+    }
+
+    virtual void Update(float dt) override 
     {
         auto input = GetInput(); 
 
@@ -202,7 +199,7 @@ public:
         //         * Quaternion::AxisAngle(Vector3::Up, CamRot.X); 
     }
 
-    void Render() 
+    virtual void Render() override 
     {
         auto graphics = GetGraphics(); 
 
@@ -404,7 +401,7 @@ public:
     class World World; 
     // gui 
     Ref<Font> MyFont; 
-    Ref<GUIElement> UI, UI2; 
+    // Ref<Widget> UI, UI2; 
 }; 
 
 ENGINE_MAIN_CLASS(Main) 

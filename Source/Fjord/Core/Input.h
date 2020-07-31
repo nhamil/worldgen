@@ -3,7 +3,7 @@
 #include "Fjord/Common.h" 
 #include "Fjord/Core/Engine.h" 
 #include "Fjord/Core/Key.h" 
-#include "Fjord/GUI/GUIEnvironment.h" 
+// #include "Fjord/GUI/GUIEnvironment.h" 
 #include "Fjord/Math/Vector2.h" 
 
 #include <iostream> 
@@ -32,6 +32,7 @@ namespace Fjord
 
     private: 
         friend class Window; 
+        friend int Run(Application* app); 
 
         using IntSet = HashSet<int>; 
 
@@ -47,24 +48,24 @@ namespace Fjord
 
         void OnKeyDown(Key key) 
         {
-            GUIKeyEvent e(key, true); 
-            GetGUI()->OnKeyEvent(e); 
+            // GUIKeyEvent e(key, true); 
+            // GetGUI()->OnKeyEvent(e); 
 
-            if (e.IsAvailable()) 
-            {
+            // if (e.IsAvailable()) 
+            // {
                 DownKeys_.insert(key); 
-            }
+            // }
         } 
 
         void OnKeyUp(Key key) 
         {
-            GUIKeyEvent e(key, false); 
-            GetGUI()->OnKeyEvent(e); 
+            // GUIKeyEvent e(key, false); 
+            // GetGUI()->OnKeyEvent(e); 
 
-            if (e.IsAvailable()) 
-            {
+            // if (e.IsAvailable()) 
+            // {
                 DownKeys_.erase(key); 
-            }
+            // }
         } 
 
         void OnMouseMove(const Vector2& pos, const Vector2& vel) 
@@ -73,41 +74,41 @@ namespace Fjord
             CurMouseMove_ += {vel.X, vel.Y}; 
             CurMouse_ = {pos.X, pos.Y}; 
 
-            GUIMouseMoveEvent e(pos.X, pos.Y, vel.X, vel.Y); 
-            GetGUI()->HandleMouseMoveEvent(e); 
+            // GUIMouseMoveEvent e(pos.X, pos.Y, vel.X, vel.Y); 
+            // GetGUI()->HandleMouseMoveEvent(e); 
         }
 
         void OnMouseDown(unsigned button) 
         {
-            GUIMouseEvent e(Mouse_.X, Mouse_.Y, button, true); 
-            GetGUI()->HandleMouseEvent(e); 
+            // GUIMouseEvent e(Mouse_.X, Mouse_.Y, button, true); 
+            // GetGUI()->HandleMouseEvent(e); 
 
-            if (e.IsAvailable()) 
-            {
+            // if (e.IsAvailable()) 
+            // {
                 DownButtons_.insert(button); 
-            }
+            // }
         }
 
         void OnMouseUp(unsigned button) 
         {
-            GUIMouseEvent e(Mouse_.X, Mouse_.Y, button, false); 
-            GetGUI()->HandleMouseEvent(e); 
+            // GUIMouseEvent e(Mouse_.X, Mouse_.Y, button, false); 
+            // GetGUI()->HandleMouseEvent(e); 
 
-            if (e.IsAvailable()) 
-            {
+            // if (e.IsAvailable()) 
+            // {
                 DownButtons_.erase(button); 
-            }
+            // }
         }
 
         void OnMouseWheel(int amount) 
         {
-            GUIMouseWheelEvent e(Mouse_.X, Mouse_.Y, amount); 
-            GetGUI()->HandleMouseWheelEvent(e); 
+            // GUIMouseWheelEvent e(Mouse_.X, Mouse_.Y, amount); 
+            // GetGUI()->HandleMouseWheelEvent(e); 
 
-            if (e.IsAvailable()) 
-            {
+            // if (e.IsAvailable()) 
+            // {
                 CurWheel_ += amount; 
-            }
+            // }
         }
 
         // TODO keep prev update

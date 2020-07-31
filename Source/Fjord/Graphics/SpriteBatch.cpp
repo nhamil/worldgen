@@ -2,6 +2,7 @@
 
 #include "Fjord/Core/Window.h" 
 #include "Fjord/Graphics/Graphics.h"
+#include "Fjord/Math/MathUtil.h" 
 
 namespace Fjord 
 {
@@ -137,6 +138,11 @@ namespace Fjord
         }
     } 
 
+    void SpriteBatch::SetDepth(float z) 
+    {
+        Z_ = z; 
+    }
+
     void SpriteBatch::SetShader(Shader* shader) 
     {
         Ref<Shader> newShader = shader ? shader : DefaultShader_.Get(); 
@@ -172,8 +178,7 @@ namespace Fjord
         Draw(
             nullptr, col, 
             x, y, w, h, 
-            0, 0, 0, 0, 
-            0, 0, 0
+            0, 0, 0, 0
         ); 
     }
 
@@ -188,8 +193,7 @@ namespace Fjord
         Draw(
             tex, Color::White, 
             x, y, w, h, 
-            0, 0, tw, th, 
-            0, 0, 0
+            0, 0, tw, th
         ); 
     }
 
@@ -204,8 +208,7 @@ namespace Fjord
         Draw(
             tex, col, 
             x, y, w, h, 
-            0, 0, tw, th, 
-            0, 0, 0
+            0, 0, tw, th
         ); 
     }
 
@@ -217,47 +220,43 @@ namespace Fjord
         Draw(
             tex, Color::White, 
             x, y, w, h, 
-            tx, ty, tw, th, 
-            0, 0, 0
-        ); 
-    }
-
-    void SpriteBatch::Draw(
-        Texture2D* tex, Color col, 
-        float x, float y, float w, float h, 
-        float tx, float ty, float tw, float th) 
-    {
-        Draw(
-            tex, col, 
-            x, y, w, h, 
-            tx, ty, tw, th, 
-            0, 0, 0
+            tx, ty, tw, th
         ); 
     }
 
     void SpriteBatch::Draw(
         Texture2D* tex, Color col, 
             float x, float y, float w, float h, 
-            float tx, float ty, float tw, float th, 
-            float rotX, float rotY, float angle)
+            float tx, float ty, float tw, float th)
     {
         SetTextMode(false); 
         SetTexture(tex); 
         
-        float z = 0.0f; 
+        float z = Z_; 
 
         float invW = Texture_->GetInvWidth(); 
         float invH = Texture_->GetInvHeight(); 
-        float tx0 = tx * invW; 
-        float tx1 = (tx + tw) * invW; 
-        float ty0 = ty * invH; 
-        float ty1 = (ty + th) * invH; 
+        float Tx0 = tx * invW; 
+        float Tx1 = (tx + tw) * invW; 
+        float Ty0 = ty * invH; 
+        float Ty1 = (ty + th) * invH; 
+
+        float x0 = x, y0 = y, x1 = x + w, y1 = y + h; 
+        float fx0, fy0, fx1, fy1; 
+        float tx0, ty0, tx1, ty1; 
+        
+        if (!Clip(x0, y0, x1, y1, fx0, fy0, fx1, fy1)) return; // rectangle fully out of bounds 
+
+        tx0 = Lerp(Tx0, Tx1, fx0); 
+        ty0 = Lerp(Ty0, Ty1, fy0); 
+        tx1 = Lerp(Tx0, Tx1, fx1); 
+        ty1 = Lerp(Ty0, Ty1, fy1); 
 
         VertexPositionTextureColor verts[4] = {
-            {{x, y, z}, {tx0, ty0}, col}, 
-            {{x+w, y, z}, {tx1, ty0}, col}, 
-            {{x+w, y+h, z}, {tx1, ty1}, col}, 
-            {{x, y+h, z}, {tx0, ty1}, col}, 
+            {{x0, y0, z}, {tx0, ty0}, col}, 
+            {{x1, y0, z}, {tx1, ty0}, col}, 
+            {{x1, y1, z}, {tx1, ty1}, col}, 
+            {{x0, y1, z}, {tx0, ty1}, col}, 
         };
         AddRect(verts); 
     }  
@@ -272,15 +271,15 @@ namespace Fjord
         DrawString(nullptr, col, size, str, x, y); 
     } 
 
-    void SpriteBatch::DrawString(Font* font, Color col, const char* str, float x, float y) 
+    void SpriteBatch::DrawString(Font* f, Color col, const char* str, float x, float y) 
     {
-        font = font ? font : DefaultFont_.Get(); 
+        FontFace* font = f ? f->GetFace() : DefaultFont_.Get()->GetFace(); 
         DrawString(font, col, font->GetSize(), str, x, y); 
     }
 
-    void SpriteBatch::DrawString(Font* font, Color col, float size, const char* str, float x, float y) 
+    void SpriteBatch::DrawString(FontFace* font, Color col, float size, const char* str, float x, float y) 
     {
-        if (!font) font = DefaultFont_.Get(); 
+        if (!font) font = DefaultFont_.Get()->GetFace(); 
 
         FJ_EASSERT(font); 
 
@@ -288,7 +287,7 @@ namespace Fjord
         SetTextShader(nullptr); 
         SetTexture(font->GetTexture()); 
 
-        float z = 0; 
+        float z = Z_; 
         float iW = font->GetTexture()->GetInvWidth(); 
         float iH = font->GetTexture()->GetInvHeight(); 
 
@@ -318,10 +317,22 @@ namespace Fjord
             float x1 = x0 + (glyph->Width + 4) * scale; 
             float y1 = y0 + (glyph->Height + 4) * scale; 
 
-            float tx0 = (glyph->TextureX - 2) * iW; 
-            float ty0 = (glyph->TextureY - 2) * iH; 
-            float tx1 = (glyph->TextureX + glyph->Width + 2) * iW; 
-            float ty1 = (glyph->TextureY + glyph->Height + 2) * iH; 
+            x += glyph->Advance * scale; 
+
+            float Tx0 = (glyph->TextureX - 2) * iW; 
+            float Ty0 = (glyph->TextureY - 2) * iH; 
+            float Tx1 = (glyph->TextureX + glyph->Width + 2) * iW; 
+            float Ty1 = (glyph->TextureY + glyph->Height + 2) * iH; 
+
+            float fx0, fy0, fx1, fy1; 
+            float tx0, ty0, tx1, ty1; 
+            
+            if (!Clip(x0, y0, x1, y1, fx0, fy0, fx1, fy1)) continue; 
+
+            tx0 = Lerp(Tx0, Tx1, fx0); 
+            ty0 = Lerp(Ty0, Ty1, fy0); 
+            tx1 = Lerp(Tx0, Tx1, fx1); 
+            ty1 = Lerp(Ty0, Ty1, fy1); 
 
             VertexPositionTextureColor verts[4] = {
                 {{x0, y0, z}, {tx0, ty0}, col}, 
@@ -330,8 +341,6 @@ namespace Fjord
                 {{x0, y1, z}, {tx0, ty1}, col}, 
             };
             AddRect(verts); 
-
-            x += glyph->Advance * scale; 
         }
     }
 
@@ -377,7 +386,7 @@ namespace Fjord
 
         if (!DefaultFont_) 
         {
-            DefaultFont_ = new Font("Default", 32); 
+            DefaultFont_ = new Font("Default"); 
         }
 
         if (!WhiteTexture_) 
@@ -408,6 +417,59 @@ namespace Fjord
         {
             Flush(); 
         }
+    }
+
+    void SpriteBatch::SetBounds(float x, float y, float w, float h) 
+    {
+        Bounds_.Enabled = true; 
+        Bounds_.X = x; 
+        Bounds_.Y = y; 
+        Bounds_.W = w; 
+        Bounds_.H = h; 
+    }
+
+    void SpriteBatch::ClearBounds() 
+    {
+        Bounds_.Enabled = false; 
+    }
+
+    bool SpriteBatch::Clip(float& x1, float& y1, float& x2, float& y2, float& xMix1, float& yMix1, float& xMix2, float& yMix2) 
+    {
+        if (!Bounds_.Enabled) 
+        {
+            xMix1 = 0; 
+            xMix2 = 1; 
+            yMix1 = 0; 
+            yMix2 = 1; 
+            return true; 
+        }
+
+        float cx1 = Bounds_.X; 
+        float cy1 = Bounds_.Y; 
+        float cx2 = cx1 + Bounds_.W;  
+        float cy2 = cy1 + Bounds_.H; 
+
+        float x = x1; 
+        float y = y1; 
+        float iw = (x2 == x1) ? 0 : (1.0 / (x2 - x1)); 
+        float ih = (y2 == y1) ? 0 : (1.0 / (y2 - y1)); 
+
+        if (cx1 > x2) return false; 
+        if (cx2 < x1) return false; 
+        if (cy1 > y2) return false; 
+        if (cy2 < y1) return false; 
+
+        if (cx1 > x1) x1 = cx1; 
+        if (cx2 < x2) x2 = cx2; 
+        if (cy1 > y1) y1 = cy1; 
+        if (cy2 < y2) y2 = cy2; 
+
+        xMix1 = (x1 - x) * iw; 
+        xMix2 = (x2 - x) * iw; 
+        yMix1 = (y1 - y) * ih; 
+        yMix2 = (y2 - y) * ih; 
+
+        return true; 
     }
 
 }

@@ -57,14 +57,14 @@ namespace Fjord
         auto* window = GetWindow(); 
         // GLCALL(glEnable(GL_SCISSOR_TEST)); 
 
-        GLCALL(glScissor(x, window->GetHeight() - y - h, w, h)); 
+        // GLCALL(glScissor(x, window->GetHeight() - y - h, w, h)); 
     }
 
     void Graphics::ResetClip() 
     {
         auto* window = GetWindow(); 
         // GLCALL(glDisable(GL_SCISSOR_TEST)); 
-        GLCALL(glScissor(0, 0, window->GetWidth(), window->GetHeight())); 
+        // GLCALL(glScissor(0, 0, window->GetWidth(), window->GetHeight())); 
     }
 
     void Graphics::ClearTextures() 

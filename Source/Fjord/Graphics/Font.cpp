@@ -16,7 +16,42 @@ namespace Fjord
     static bool s_FreeTypeInit = false; 
     static FT_Library s_FreeType; 
 
-    Font::Font(const String& filename, float fontSize) 
+    Ref<Font> Font::DefaultFont_{}; 
+
+    Font* Font::GetDefaultFont() 
+    {
+        if (!DefaultFont_) 
+        {
+            DefaultFont_ = new Font("Default"); 
+        }
+        return DefaultFont_; 
+    }
+
+    Font::Font(const String& filename) 
+        : FontName_{filename} 
+    {
+        GetFace(DefaultSize); 
+    }
+
+    Font::~Font() {}
+
+    FontFace* Font::GetFace(unsigned s) 
+    {
+        auto it = Sizes_.find(s); 
+
+        if (it != Sizes_.end()) 
+        {
+            return it->second; 
+        }
+        else 
+        {
+            FontFace* face = new FontFace(FontName_, s); 
+            Sizes_[s] = face; 
+            return face; 
+        }
+    }
+
+    FontFace::FontFace(const String& filename, float fontSize) 
         : FontSize_(fontSize) 
     {
         if (!s_FreeTypeInit) 
@@ -127,17 +162,17 @@ namespace Fjord
         FT_Done_Face(face); 
     }
 
-    Font::~Font() 
+    FontFace::~FontFace() 
     {
 
     }
 
-    Texture2D* Font::GetTexture() const 
+    Texture2D* FontFace::GetTexture() const 
     {
         return Texture_; 
     }
 
-    const Glyph* Font::GetGlyph(unsigned c) const 
+    const Glyph* FontFace::GetGlyph(unsigned c) const 
     {
         auto it = Glyphs_.find(c); 
 
@@ -151,7 +186,7 @@ namespace Fjord
         }
     }
 
-    StringMetrics Font::GetMetrics(const char* str) const 
+    StringMetrics FontFace::GetMetrics(const char* str) const 
     {
         StringMetrics sm; 
 

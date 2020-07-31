@@ -23,11 +23,11 @@ namespace Fjord
         float PxHeight = 0; 
     };
 
-    class Font : public RefCounted 
+    class FontFace : public RefCounted 
     {
     public: 
-        Font(const String& file, float fontSize = 16); 
-        ~Font(); 
+        FontFace(const String& file, float fontSize = 16); 
+        ~FontFace(); 
 
         const String& GetName() const { return FontName_; } 
 
@@ -49,6 +49,37 @@ namespace Fjord
         float FontSize_{0}; 
         float MaxGlyphHeight_{0}; 
         float GlyphOffsetY_{0}; 
+        String FontName_{}; 
+    };
+
+    class Font : public RefCounted 
+    {
+    public: 
+        static Font* GetDefaultFont(); 
+
+        static const unsigned DefaultSize = 16; 
+
+        Font(const String& file); 
+        ~Font(); 
+
+        const String& GetName() const { return FontName_; } 
+
+        FontFace* GetFace(unsigned size = DefaultSize); 
+
+        StringMetrics GetMetrics(const char* str, unsigned size = DefaultSize) 
+        {
+            return GetFace(size)->GetMetrics(str); 
+        }
+
+        StringMetrics GetMetrics(const String& str, unsigned size = DefaultSize) 
+        {
+            return GetFace(size)->GetMetrics(str); 
+        }
+
+    private: 
+        static Ref<Font> DefaultFont_; 
+
+        HashMap<unsigned, Ref<FontFace>> Sizes_{}; 
         String FontName_{}; 
     };
 

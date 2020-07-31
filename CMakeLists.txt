@@ -22,6 +22,7 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Core/Application.cpp 
     ${FJORD_SOURCE_FOLDER}/Core/Engine.cpp 
     ${FJORD_SOURCE_FOLDER}/Core/Log.cpp 
+    ${FJORD_SOURCE_FOLDER}/Core/UI.cpp 
     ${FJORD_SOURCE_FOLDER}/Core/Window.cpp 
 
     ${FJORD_SOURCE_FOLDER}/Graphics/Color.cpp 
@@ -37,11 +38,12 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Graphics/Texture2D.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/VertexBuffer.cpp 
 
-    ${FJORD_SOURCE_FOLDER}/GUI/Button.cpp 
-    ${FJORD_SOURCE_FOLDER}/GUI/Frame.cpp 
-    ${FJORD_SOURCE_FOLDER}/GUI/GUIElement.cpp 
-    ${FJORD_SOURCE_FOLDER}/GUI/GUIRenderer.cpp 
-    ${FJORD_SOURCE_FOLDER}/GUI/Layout.cpp 
+    # ${FJORD_SOURCE_FOLDER}/GUI/Button.cpp 
+    # ${FJORD_SOURCE_FOLDER}/GUI/Frame.cpp 
+    # ${FJORD_SOURCE_FOLDER}/GUI/Widget.cpp 
+    # ${FJORD_SOURCE_FOLDER}/GUI/GUIRenderer.cpp 
+    # ${FJORD_SOURCE_FOLDER}/GUI/Label.cpp 
+    # ${FJORD_SOURCE_FOLDER}/GUI/Layout.cpp 
 
     ${FJORD_SOURCE_FOLDER}/Math/Math.cpp 
 

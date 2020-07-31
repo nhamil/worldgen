@@ -132,12 +132,12 @@ void BasicTerrainGenRule::Apply(World& world)
             world.SetTerrain(cell, Terrain::Mountain); 
             land++; 
         }
-        else if (height > 0.57) 
+        else if (height > 0.56) 
         {
             world.SetTerrain(cell, Terrain::Grassland); 
             land++; 
         }
-        else if (height > 0.55) 
+        else if (height > 0.54) 
         {
             world.SetTerrain(cell, Terrain::ShallowWater); 
             water++; 
