@@ -44,3 +44,9 @@ inline T SmoothLerp(const T& x, const T& y, const S& a)
 {
     return Lerp(x, y, a*a*(3-2*a));  
 }
+
+template <class T> 
+inline T Round(const T& x) 
+{
+    return std::round(x); 
+}

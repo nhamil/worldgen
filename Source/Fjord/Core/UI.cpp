@@ -53,6 +53,11 @@ namespace Fjord { namespace UI
             int PaddingX = 10; 
             int PaddingY = 10; 
         } Widget;
+        struct 
+        {
+            int KnobWidth = 8; 
+            int KnobHalfWidth = 4; 
+        } Slider; 
     };
 
     static const Config DefaultConfig; 
@@ -348,6 +353,16 @@ namespace Fjord { namespace UI
         return true; 
     }
 
+    static bool IsMouseDown() 
+    {
+        return CurState.MouseDown; 
+    }
+
+    static bool IsMouseUp() 
+    {
+        return !CurState.MouseDown; 
+    }
+
     static bool IsMouseJustDown() 
     {
         return CurState.MouseDown && !PrevState.MouseDown; 
@@ -356,6 +371,16 @@ namespace Fjord { namespace UI
     static bool IsMouseJustUp() 
     {
         return !CurState.MouseDown && PrevState.MouseDown; 
+    }
+
+    static float GetMouseX() 
+    {
+        return CurState.MouseX; 
+    }
+
+    static float GetMouseY() 
+    {
+        return CurState.MouseY; 
     }
 
     static Id GetActive() 
@@ -542,11 +567,6 @@ namespace Fjord { namespace UI
         CurWindow = id; 
         // FJ_EFDEBUG("%s: %d %d %d %d", title.c_str(), w.X, w.Y, w.Width, w.Height); 
 
-        if (w.DragMode) 
-        {
-            w.X = CurState.MouseX - w.MouseX; 
-            w.Y = CurState.MouseY - w.MouseY; 
-        }
         w.ResetForFrame(); 
 
         // AddRect({0.9f, 0.9f, 0.9f}, w.X, w.Y, w.Width, w.Height, Bounds().Apply(w)); 
@@ -570,14 +590,15 @@ namespace Fjord { namespace UI
         Id id = CurWindow; 
         Window& w = GetWindow(id); 
 
-        SetHot(id, GetHot() == NullId && IsMouseInBounds(w.X, w.Y, w.Width, CurConfig.Window.TitleHeight)); 
+        // SetHot(id, GetHot() == NullId && IsMouseInBounds(w.X, w.Y, w.Width, CurConfig.Window.TitleHeight)); 
+        SetHot(id, GetHot() == NullId && IsMouseInBounds(w.X, w.Y, w.Width, w.Height)); 
 
         if (GetActive() == NullId && IsMouseJustDown() && IsMouseInBounds(w.X, w.Y, w.Width, w.Height))  
         {
-            if (IsMouseInBounds(w.X, w.Y, w.Width, CurConfig.Window.TitleHeight)) 
-            {
+            // if (IsMouseInBounds(w.X, w.Y, w.Width, CurConfig.Window.TitleHeight)) 
+            // {
                 w.DragMode = true; 
-            }
+            // }
             SetActive(id, true); 
             w.MouseX = CurState.MouseX - w.X; 
             w.MouseY = CurState.MouseY - w.Y; 
@@ -587,6 +608,12 @@ namespace Fjord { namespace UI
         {
             SetActive(id, false); 
             w.DragMode = false; 
+        }
+
+        if (w.DragMode) 
+        {
+            w.X = CurState.MouseX - w.MouseX; 
+            w.Y = CurState.MouseY - w.MouseY; 
         }
 
         CurWindow = NullId; 
@@ -601,21 +628,6 @@ namespace Fjord { namespace UI
 
     static void RenderButton(Window& window, Id id, const String& text, int x, int y, int w, int h, Bounds b) 
     {
-        // if (IsActive(id)) 
-        // {
-        //     AddRect({0.3f, 0.3f, 0.3f}, x, y, w, h, b); 
-        // }
-        // else if (IsHot(id)) 
-        // {
-        //     AddRect({0.35f, 0.3f, 1.0f}, x, y, w, h, b); 
-        // }
-        // else 
-        // {
-        //     AddRect({0.5f, 0.5f, 1.0f}, x, y, w, h, b); 
-        // }
-        // b.Apply(x, y, w, h); 
-        // AddText(Color::Black, x, y, w, h, text, b); 
-
         if (IsActive(id)) 
         {
             AddRect({0.4f, 0.4f, 0.8f}, x, y, w, h, b); 
@@ -681,26 +693,6 @@ namespace Fjord { namespace UI
 
     static void RenderCheckbox(Window& window, Id id, const String& text, int x, int y, int w, int h, bool value, Bounds b) 
     {
-            // {0.1f, 0.1f, 0.1f, 0.9f}
-
-        // if (IsActive(id)) 
-        // {
-        //     // draw sqaure
-        //     AddRect(value ? Color{0.7f, 0.3f, 0.3f} : Color{0.3f, 0.3f, 0.3f}, x, y, h, h, b); 
-        // }
-        // else if (IsHot(id)) 
-        // {
-        //     // draw square
-        //     AddRect(value ? Color{1.0f, 0.3f, 0.35f} : Color{0.5f, 0.5f, 0.5f}, x, y, h, h, b); 
-        // }
-        // else 
-        // {
-        //     // draw square 
-        //     AddRect(value ? Color{1.0f, 0.5f, 0.5f} : Color{0.7f, 0.7f, 0.7f}, x, y, h, h, b); 
-        // }
-        // b.Apply(x+h, y, w-h, h); 
-        // AddText(Color::Black, x+h, y, w-h, h, text, b); 
-
         int in = 3; 
 
         if (IsHot(id)) 
@@ -716,7 +708,7 @@ namespace Fjord { namespace UI
         if (IsActive(id)) 
         {
             // draw square
-            AddRect({0.7f, 0.7f, 0.8f}, x+in, y+in, h-in*2, h-in*2, b); 
+            AddRect({0.6f, 0.6f, 0.6f}, x+in, y+in, h-in*2, h-in*2, b); 
         }
         else if (value)
         {
@@ -739,8 +731,6 @@ namespace Fjord { namespace UI
         int height = 20; 
         int width = GetFontFace()->GetMetrics(text).PxWidth + height + 10; 
         w.AddItem(x, y, width, height); 
-
-        // FJ_EFDEBUG("%d %d %d %d", x, y, width, height); 
 
         Bounds b; 
         b.Apply(x, y, width, height); 
@@ -785,6 +775,7 @@ namespace Fjord { namespace UI
     void Separator() 
     {
         // TODO what happens if SameLine() is called 
+        // TODO handle width increasing after this separator
         FJ_EASSERT(CurWindow != NullId); 
         Window& w = GetWindow(CurWindow); 
 
@@ -794,6 +785,94 @@ namespace Fjord { namespace UI
         w.AddItem(x, y, width, height); 
 
         AddRect({0.3f, 0.3f, 0.3f}, x, y, width, height, Bounds()); 
+    }
+
+    static void RenderSliderFloat(Window& window, Id id, const String& text, int x, int y, int w, int h, float frac, float value, const char* fmt, Bounds b) 
+    {
+        int sliderLoc = (int) (frac * (100 - CurConfig.Slider.KnobWidth)) + x + CurConfig.Slider.KnobHalfWidth; 
+
+        AddRect({0.3f, 0.3f, 0.3f}, x, y, 100, h, b); 
+        // if (IsActive(id)) 
+        // {
+        //     AddRect({0.4f, 0.4f, 0.8f}, x, y, w, h, b); 
+        // }
+        // else if (IsHot(id)) 
+        // {
+        //     AddRect({0.4f, 0.4f, 0.4f}, x, y, w, h, b); 
+        // }
+        // else 
+        // {
+        //     AddRect({0.3f, 0.3f, 0.3f}, x, y, w, h, b); 
+        // }
+        AddRect({0.5f, 0.5f, 0.5f}, sliderLoc - 4, y, 8, h, b); 
+
+        Bounds bOld = b; 
+        char num[20]; 
+        snprintf(num, 20, fmt, value); 
+        b.Apply(x, y, 100, h); 
+        AddText({0.8f, 0.8f, 0.8f}, x, y, 100, h, num, b); 
+        b = bOld; 
+        b.Apply(x + 100, y, w - 100, h); 
+        AddText({0.8f, 0.8f, 0.8f}, x + 110, y, w - 110, h, text, b); 
+    }
+
+    void SliderFloat(const String& text, float* v, float min, float max, int ticks, const char* format) 
+    {
+        FJ_EASSERT(CurWindow != NullId); 
+        Window& w = GetWindow(CurWindow); 
+
+        float value = v ? *v : (min + max) / 2; 
+        float frac = (value - min) / (max - min); 
+
+        Id id = GetId(text, CurWindow); 
+        int x, y;  
+        int height = 20; 
+        // int width = 100; 
+        int width = GetFontFace()->GetMetrics(text).PxWidth + 100 + 10; 
+        w.AddItem(x, y, width, height); 
+
+        int sliderX = x; 
+        int sliderY = y; 
+        int sliderW = 100; 
+        int sliderH = height; 
+
+        Bounds b; 
+        b.Apply(x, y, width, height); 
+        b.Apply(w); 
+
+        if (IsMouseInBounds(sliderX, sliderY, sliderW, sliderH, b)) 
+        {
+            SetHot(id, true); 
+
+            if (IsMouseJustDown()) 
+            {
+                SetActive(id, true); 
+            }
+        }
+        else 
+        {
+            SetHot(id, false); 
+        }
+
+        if (IsMouseUp()) 
+        {
+            SetActive(id, false); 
+        }
+
+        if (IsActive(id)) 
+        {
+            frac = (GetMouseX() - (sliderX + CurConfig.Slider.KnobHalfWidth)) / (sliderW - CurConfig.Slider.KnobWidth); 
+            frac = Clamp(frac, 0.0f, 1.0f); 
+            if (ticks > 0) 
+            {
+                frac = Round(frac * ticks) / ticks; 
+            }
+            value = frac * (max-min) + min; 
+        }
+
+        RenderSliderFloat(w, id, text, x, y, width, height, frac, value, format, b); 
+        if (v) *v = value; 
+        return; 
     }
 
 }}

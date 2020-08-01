@@ -41,7 +41,7 @@ public:
     {
         Random r; 
 
-        // FJ_ELOG_LEVEL(Info); 
+        FJ_ELOG_LEVEL(Info); 
 
         FJ_INFO("Application initializing..."); 
 
@@ -127,35 +127,51 @@ public:
         UI::Checkbox("Show Stars", &DrawStars); 
         UI::SameLine(); 
         UI::Checkbox("Show Outlines", &DrawOutlines); 
+
         UI::Checkbox("Show Links", &DrawConnections); 
         UI::SameLine(); 
         UI::Checkbox("Show Cells", &DrawCells); 
+
         UI::Checkbox("Lighting Enabled", &DrawShaded); 
+        UI::SameLine(); 
+        UI::Checkbox("Camera Light", &CameraLight); 
 
         UI::Separator(); 
+        UI::SliderFloat("Light Dir X", &LightDirection[0], -1.0, 1.0, 0, "%0.3f"); //UI::SameLine(); 
+        UI::SliderFloat("Light Dir Y", &LightDirection[1], -1.0, 1.0, 0, "%0.3f"); //UI::SameLine(); 
+        UI::SliderFloat("Light Dir Z", &LightDirection[2], -1.0, 1.0, 0, "%0.3f"); 
+        LightDirection = Normalized(LightDirection); 
+        UI::Separator(); 
 
+        float size = WorldSize; 
+        UI::SliderFloat("Next World Size", &size, 0, 10, 10, "%0.0f"); 
+        WorldSize = (int) size; 
+
+        UI::SliderFloat("Zoom Sensitivity", &ZoomSens, 0.001, 2, 0, "%0.3f"); 
+        if (UI::Button("Generate")) GenWorld(); 
+        UI::SameLine(); 
         if (UI::Button("Reset Zoom")) Zoom = 1.0; 
 
         // gen world 
-        for (int i = 0; i <= 10; i++) 
-        {
-            UI::PushId(i); 
-            if (i % 2 == 0) UI::SameLine(); 
-            if (UI::Button("Gen Size " + ToString(i))) 
-            {
-                WorldSize = i; 
-                if (i >= 9) 
-                {
-                    FJ_INFO("This will take a very long time"); 
-                }
-                else if (i >= 7) 
-                {
-                    FJ_INFO("This will take a while"); 
-                }
-                GenWorld(); 
-            }
-            UI::PopId(); 
-        }
+        // for (int i = 0; i <= 10; i++) 
+        // {
+        //     UI::PushId(i); 
+        //     if (i % 2 == 0) UI::SameLine(); 
+        //     if (UI::Button("Gen Size " + ToString(i))) 
+        //     {
+        //         WorldSize = i; 
+        //         if (i >= 9) 
+        //         {
+        //             FJ_INFO("This will take a very long time"); 
+        //         }
+        //         else if (i >= 7) 
+        //         {
+        //             FJ_INFO("This will take a while"); 
+        //         }
+        //         GenWorld(); 
+        //     }
+        //     UI::PopId(); 
+        // }
         UI::EndWindow(); 
     }
 
@@ -184,7 +200,7 @@ public:
             GenWorld(); 
         }
 
-        Zoom *= 1 - 0.1 * input->GetMouseWheel(); 
+        Zoom *= 1 - (0.1 * input->GetMouseWheel()) * ZoomSens; 
 
         Yaw += DYaw; 
         Pitch += DPitch; 
@@ -210,6 +226,17 @@ public:
         //         * Quaternion::AxisAngle(Vector3::Up, CamRot.X); 
 
         Zoom = Clamp(Zoom, 0.0001, 5.0); 
+
+        if (CameraLight) 
+        {
+            Matrix4 tfm = Matrix4::RotationY(90 * FJ_TO_RAD); 
+            LightDirection = Normalized(Transform(tfm, -CamPos, true)); 
+            LightDirection.Y *= -1; 
+
+            Vector3 right = Normalized(Cross(Vector3::Up, LightDirection)); 
+            Vector3 up = Normalized(Cross(right, LightDirection)); 
+            LightDirection = Normalized(Quaternion::AxisAngle(up, 45 * FJ_TO_RAD) * LightDirection); 
+        }
     }
 
     virtual void Render() override 
@@ -263,6 +290,7 @@ public:
         }
 
         LightShader->SetMatrix4("u_Model", tfm); 
+        LightShader->SetVector3("u_LightDirection", LightDirection); 
         graphics->SetShader(LightShader); 
 
         if (DrawCells && DrawShaded) 
@@ -449,12 +477,15 @@ public:
     bool DrawCells = true; 
     bool DrawStars = true; 
     bool DrawShaded = true; 
+    bool CameraLight = false; 
+    Vector3 LightDirection = Vector3::Right; 
     // world gen 
     Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, FluidMesh, FluidVelMesh; 
     class World World; 
     int WorldSize = 5; 
     // gui 
     Ref<Font> MyFont; 
+    float ZoomSens = 1.0; 
     // Ref<Widget> UI, UI2; 
 }; 
 

@@ -54,9 +54,10 @@ namespace Fjord
             SDL_WINDOWPOS_CENTERED, 
             width, 
             height, 
-            SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
+            SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN// | SDL_WINDOW_MOUSE_CAPTURE 
         ); 
         SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1"); 
+        // SDL_CaptureMouse(SDL_TRUE); 
 
         GLContext_ = SDL_GL_CreateContext(Window_); 
         glewExperimental = GL_TRUE; 
@@ -104,6 +105,7 @@ namespace Fjord
                     float y = e.motion.y; 
                     float dx = e.motion.xrel; 
                     float dy = e.motion.yrel; 
+                    // if (fabs(dx) < 1 || fabs(dy) < 1) break; 
                     Input_.OnMouseMove({x, y}, {dx, dy}); 
                     break; 
                 }

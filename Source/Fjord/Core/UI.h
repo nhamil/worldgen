@@ -42,6 +42,7 @@ namespace Fjord
 
         bool Button(const String& text); 
         bool Checkbox(const String& text, bool* value); 
+        void SliderFloat(const String& text, float* value, float min, float max, int ticks = 0, const char* format = "%0.6f"); 
 
     }
 }

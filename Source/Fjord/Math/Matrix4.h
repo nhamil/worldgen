@@ -279,7 +279,8 @@ namespace Fjord
 
     inline Vector3 Transform(const Matrix4& a, const Vector3& b, bool point) 
     {
-        return ((a * Vector4(b.X, b.Y, b.Z, point ? 1.0 : 0.0)).Swizzle3("XYZ")); 
+        Vector4 out = a * Vector4(b.X, b.Y, b.Z, point ? 1.0 : 0.0); 
+        return out.Swizzle3("XYZ") * (point ? 1.0 / out.W : 1.0); 
     }
 
     inline Matrix4 Transpose(const Matrix4& r) 
