@@ -56,6 +56,7 @@ namespace Fjord
             height, 
             SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
         ); 
+        SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1"); 
 
         GLContext_ = SDL_GL_CreateContext(Window_); 
         glewExperimental = GL_TRUE; 
