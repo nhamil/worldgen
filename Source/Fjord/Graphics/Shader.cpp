@@ -34,18 +34,21 @@ namespace Fjord
         return ATTRIBUTE_NAME[(int) attrib]; 
     }
 
-    ParameterType GetParameterType(GLenum type) 
+    ParameterType GetParameterType(const char* name, GLenum type) 
     {
         switch (type) 
         {
         case GL_INT: return ParameterType::Int; 
+        case GL_SAMPLER_2D: return ParameterType::Int; 
         case GL_FLOAT: return ParameterType::Float; 
         case GL_FLOAT_VEC2: return ParameterType::Vector2; 
         case GL_FLOAT_VEC3: return ParameterType::Vector3; 
         case GL_FLOAT_VEC4: return ParameterType::Vector4; 
         case GL_FLOAT_MAT3: return ParameterType::Matrix3; 
         case GL_FLOAT_MAT4: return ParameterType::Matrix4; 
-        default: return ParameterType::Unknown; 
+        default: 
+            FJ_EFWARN("Unknown Parameter type for '%s'", name); 
+            return ParameterType::Unknown; 
         }
     }
 
@@ -272,7 +275,7 @@ namespace Fjord
         {
             GLCALL(glGetActiveUniform(Handle_, i, 1024, &length, &size, &type, name));
 
-            ParameterType paramType = GetParameterType(type); 
+            ParameterType paramType = GetParameterType(name, type); 
             Parameters_[name] = ShaderParameter(paramType, i, Parameter(paramType));
         }
     }

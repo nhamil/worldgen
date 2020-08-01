@@ -471,9 +471,6 @@ namespace Fjord { namespace UI
         unsigned iRect = 0; 
         unsigned iText = 0; 
 
-        Batch->ClearBounds(); 
-        Batch->DrawString(Color::Black, "UI Draw Calls: " + ToString(DrawCallList.size()), 10, 55); 
-
         for (unsigned i = 0; i < DrawCallList.size(); i++) 
         {
             DrawCallType type = DrawCallList[i]; 
@@ -552,9 +549,13 @@ namespace Fjord { namespace UI
         }
         w.ResetForFrame(); 
 
-        AddRect({0.9f, 0.9f, 0.9f}, w.X, w.Y, w.Width, w.Height, Bounds().Apply(w)); 
-        AddRect({0.7f, 0.7f, 0.7f}, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, Bounds().Apply(w)); 
-        AddText(Color::Black, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, w.Title, Bounds().Apply(w)); 
+        // AddRect({0.9f, 0.9f, 0.9f}, w.X, w.Y, w.Width, w.Height, Bounds().Apply(w)); 
+        // AddRect({0.7f, 0.7f, 0.7f}, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, Bounds().Apply(w)); 
+        // AddText(Color::Black, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, w.Title, Bounds().Apply(w)); 
+
+        AddRect({0.1f, 0.1f, 0.1f, 0.9f}, w.X, w.Y, w.Width, w.Height, Bounds().Apply(w)); 
+        AddRect({0.2f, 0.2f, 0.2f, 0.9f}, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, Bounds().Apply(w)); 
+        AddText({0.8f, 0.8f, 0.8f}, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, w.Title, Bounds().Apply(w)); 
 
         if (w.IsAutoResizeEnabled()) 
         {
@@ -600,20 +601,35 @@ namespace Fjord { namespace UI
 
     static void RenderButton(Window& window, Id id, const String& text, int x, int y, int w, int h, Bounds b) 
     {
+        // if (IsActive(id)) 
+        // {
+        //     AddRect({0.3f, 0.3f, 0.3f}, x, y, w, h, b); 
+        // }
+        // else if (IsHot(id)) 
+        // {
+        //     AddRect({0.35f, 0.3f, 1.0f}, x, y, w, h, b); 
+        // }
+        // else 
+        // {
+        //     AddRect({0.5f, 0.5f, 1.0f}, x, y, w, h, b); 
+        // }
+        // b.Apply(x, y, w, h); 
+        // AddText(Color::Black, x, y, w, h, text, b); 
+
         if (IsActive(id)) 
         {
-            AddRect({0.3f, 0.3f, 0.3f}, x, y, w, h, b); 
+            AddRect({0.4f, 0.4f, 0.8f}, x, y, w, h, b); 
         }
         else if (IsHot(id)) 
         {
-            AddRect({0.35f, 0.3f, 1.0f}, x, y, w, h, b); 
+            AddRect({0.4f, 0.4f, 0.4f}, x, y, w, h, b); 
         }
         else 
         {
-            AddRect({0.5f, 0.5f, 1.0f}, x, y, w, h, b); 
+            AddRect({0.3f, 0.3f, 0.3f}, x, y, w, h, b); 
         }
         b.Apply(x, y, w, h); 
-        AddText(Color::Black, x, y, w, h, text, b); 
+        AddText({0.8f, 0.8f, 0.8f}, x, y, w, h, text, b); 
     }
 
     bool Button(const String& text) 
@@ -626,8 +642,6 @@ namespace Fjord { namespace UI
         int width = 100; 
         int height = 20; 
         w.AddItem(x, y, width, height); 
-
-        // FJ_EFDEBUG("%d %d %d %d", x, y, width, height); 
 
         Bounds b; 
         b.Apply(x, y, width, height); 
@@ -663,6 +677,123 @@ namespace Fjord { namespace UI
 
         RenderButton(w, id, text, x, y, width, height, b); 
         return false; 
+    }
+
+    static void RenderCheckbox(Window& window, Id id, const String& text, int x, int y, int w, int h, bool value, Bounds b) 
+    {
+            // {0.1f, 0.1f, 0.1f, 0.9f}
+
+        // if (IsActive(id)) 
+        // {
+        //     // draw sqaure
+        //     AddRect(value ? Color{0.7f, 0.3f, 0.3f} : Color{0.3f, 0.3f, 0.3f}, x, y, h, h, b); 
+        // }
+        // else if (IsHot(id)) 
+        // {
+        //     // draw square
+        //     AddRect(value ? Color{1.0f, 0.3f, 0.35f} : Color{0.5f, 0.5f, 0.5f}, x, y, h, h, b); 
+        // }
+        // else 
+        // {
+        //     // draw square 
+        //     AddRect(value ? Color{1.0f, 0.5f, 0.5f} : Color{0.7f, 0.7f, 0.7f}, x, y, h, h, b); 
+        // }
+        // b.Apply(x+h, y, w-h, h); 
+        // AddText(Color::Black, x+h, y, w-h, h, text, b); 
+
+        int in = 3; 
+
+        if (IsHot(id)) 
+        {
+            // draw square
+            AddRect(Color{0.4f, 0.4f, 0.4f}, x, y, h, h, b); 
+        }
+        else 
+        {
+            AddRect(Color{0.3f, 0.3f, 0.3f}, x, y, h, h, b); 
+        }
+        
+        if (IsActive(id)) 
+        {
+            // draw square
+            AddRect({0.7f, 0.7f, 0.8f}, x+in, y+in, h-in*2, h-in*2, b); 
+        }
+        else if (value)
+        {
+            // draw square 
+            AddRect({0.6f, 0.6f, 0.8f}, x+in, y+in, h-in*2, h-in*2, b); 
+        }
+        b.Apply(x+h, y, w-h, h); 
+        AddText({0.8f, 0.8f, 0.8f}, x+h, y, w-h, h, text, b); 
+    }
+
+    bool Checkbox(const String& text, bool* v) 
+    {
+        FJ_EASSERT(CurWindow != NullId); 
+        Window& w = GetWindow(CurWindow); 
+
+        bool value = v ? *v : false; 
+
+        Id id = GetId(text, CurWindow); 
+        int x, y;  
+        int height = 20; 
+        int width = GetFontFace()->GetMetrics(text).PxWidth + height + 10; 
+        w.AddItem(x, y, width, height); 
+
+        // FJ_EFDEBUG("%d %d %d %d", x, y, width, height); 
+
+        Bounds b; 
+        b.Apply(x, y, width, height); 
+        b.Apply(w); 
+
+        if (IsMouseInBounds(x, y, width, height, b)) 
+        {
+            SetHot(id, true); 
+
+            if (IsActive(id)) 
+            {
+                if (IsMouseJustUp()) 
+                {
+                    SetActive(id, false); 
+
+                    value = !value; 
+                    if (v) *v = value; 
+                    RenderCheckbox(w, id, text, x, y, width, height, value, b); 
+                    return value; 
+                }
+            }
+            else if (IsMouseJustDown()) 
+            {
+                SetActive(id, true); 
+            }
+        }
+        else 
+        {
+            SetHot(id, false); 
+        }
+
+        if (IsMouseJustUp()) 
+        {
+            SetActive(id, false); 
+        }
+
+        RenderCheckbox(w, id, text, x, y, width, height, value, b); 
+        if (v) *v = value; 
+        return value; 
+    }
+
+    void Separator() 
+    {
+        // TODO what happens if SameLine() is called 
+        FJ_EASSERT(CurWindow != NullId); 
+        Window& w = GetWindow(CurWindow); 
+
+        int x, y;  
+        int height = 2; 
+        int width = w.Width - CurConfig.Window.PaddingX * 2; 
+        w.AddItem(x, y, width, height); 
+
+        AddRect({0.3f, 0.3f, 0.3f}, x, y, width, height, Bounds()); 
     }
 
 }}

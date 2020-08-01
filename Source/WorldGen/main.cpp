@@ -41,7 +41,9 @@ public:
     {
         Random r; 
 
-        FJ_FINFO("Application initializing..."); 
+        // FJ_ELOG_LEVEL(Info); 
+
+        FJ_INFO("Application initializing..."); 
 
         CubeMesh = new Mesh(); 
 
@@ -98,36 +100,19 @@ public:
         CubeMesh->Update(); 
 
         BasicShader = Shader::Load("Basic");
-        TextShader = Shader::Load("Text"); 
+        LightShader = Shader::Load("Shaded"); 
         TestTexture = Texture2D::Load("TestImage"); 
 
         MyFont = new Font("Default"); 
 
-        // UI = new Frame(); 
-        // UI->SetColor(Color::Blue); 
-        // UI->SetPosition(20, 20); 
-        // UI->SetSize(300, 300); 
-
-        // Label* label = new Label("Hello, Label!"); 
-        // label->SetSize(100, 30); 
-        // UI->AddChild(label); 
-
-        // Button* button = new Button("Button Time"); 
-        // button->SetPosition(100, 0); 
-        // button->SetSize(100, 30); 
-        // UI->AddChild(button); 
-        
-        
-        // GetGUI()->AddChild(UI); 
-
         GenWorld(); 
 
-        FJ_FINFO("Done!"); 
+        FJ_INFO("Done!"); 
     }
 
     virtual void Stop() override
     {
-        FJ_FINFO("Finished successfully"); 
+        FJ_INFO("Finished successfully"); 
     }
 
     virtual void UpdateGUI(float dt) override
@@ -136,14 +121,34 @@ public:
 
         UI::SetNextWindowPosition(20, 100); 
         UI::SetNextWindowSize(300, 200-10); 
-        UI::BeginWindow("WorldGen", UI::WindowFlagAutoResize); 
-        for (int i = 1; i <= 10; i++) 
+        UI::BeginWindow("WorldGen Util", UI::WindowFlagAutoResize); 
+        
+        // settings 
+        UI::Checkbox("Show Stars", &DrawStars); 
+        UI::SameLine(); 
+        UI::Checkbox("Show Outlines", &DrawOutlines); 
+        UI::Checkbox("Show Links", &DrawConnections); 
+        UI::SameLine(); 
+        UI::Checkbox("Show Cells", &DrawCells); 
+        UI::Checkbox("Lighting Enabled", &DrawShaded); 
+
+        UI::Separator(); 
+
+        if (UI::Button("Reset Zoom")) Zoom = 1.0; 
+
+        // gen world 
+        for (int i = 0; i <= 10; i++) 
         {
             UI::PushId(i); 
+            if (i % 2 == 0) UI::SameLine(); 
             if (UI::Button("Gen Size " + ToString(i))) 
             {
                 WorldSize = i; 
-                if (i >= 7) 
+                if (i >= 9) 
+                {
+                    FJ_INFO("This will take a very long time"); 
+                }
+                else if (i >= 7) 
                 {
                     FJ_INFO("This will take a while"); 
                 }
@@ -203,6 +208,8 @@ public:
         // CamRot += dMouse; 
         // CamQuat = Quaternion::AxisAngle(Vector3::Left, -CamRot.Y) 
         //         * Quaternion::AxisAngle(Vector3::Up, CamRot.X); 
+
+        Zoom = Clamp(Zoom, 0.0001, 5.0); 
     }
 
     virtual void Render() override 
@@ -210,29 +217,59 @@ public:
         auto graphics = GetGraphics(); 
 
         graphics->SetDepthTest(true); 
-        graphics->SetClearColor({0.6, 0.8, 1.0, 1.0}); 
+        graphics->SetClearColor(Color::Black); 
         graphics->Clear(true, true); 
+
+        graphics->SetPointSize(1); 
+        graphics->SetLineWidth(1); 
 
         Matrix4 tfm = Matrix4::Perspective(15.0 * Zoom * FJ_TO_RAD, 1.333, 0.1, 1000.0); 
         tfm *= Matrix4::LookAt(CamPos, Vector3::Zero); 
         tfm *= Matrix4::RotationY(90 * FJ_TO_RAD); 
 
-        // graphics->SetTexture(0, TestTexture); 
-        // graphics->SetTexture(0, MyFont->GetTexture()); 
+        graphics->ClearTextures(); 
 
         BasicShader->SetMatrix4("u_Model", tfm); 
         graphics->SetShader(BasicShader); 
 
-        // graphics->SetGeometry(CubeMesh->GetGeometry()); 
-        // graphics->DrawIndexed(Primitive::Triangles, 0, CubeMesh->GetIndexCount()); 
+        if (DrawStars) 
+        {
+            graphics->SetGeometry(StarMesh->GetGeometry()); 
+            graphics->Draw(Primitive::Points, 0, StarMesh->GetVertexCount()); 
+        }
 
-        graphics->ClearTextures(); 
+        // if () 
+        // {
+        //     graphics->SetGeometry(PointMesh->GetGeometry()); 
+        //     graphics->Draw(Primitive::Points, 0, PointMesh->GetVertexCount()); 
+        // }
 
-        // graphics->SetGeometry(EdgeMesh->GetGeometry()); 
-        // graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
+        if (DrawCells && !DrawShaded) 
+        {
+            graphics->SetGeometry(CellMesh->GetGeometry()); 
+            graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
+        }
 
-        graphics->SetGeometry(CellMesh->GetGeometry()); 
-        graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
+        if (DrawConnections) 
+        {
+            graphics->SetGeometry(ConnMesh->GetGeometry()); 
+            graphics->DrawIndexed(Primitive::Lines, 0, ConnMesh->GetIndexCount()); 
+        }
+
+        if (DrawOutlines) 
+        {
+            graphics->SetGeometry(EdgeMesh->GetGeometry()); 
+            graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
+        }
+
+        LightShader->SetMatrix4("u_Model", tfm); 
+        graphics->SetShader(LightShader); 
+
+        if (DrawCells && DrawShaded) 
+        {
+            graphics->SetGeometry(CellMesh->GetGeometry()); 
+            graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
+        }
 
         Ref<SpriteBatch> sb = new SpriteBatch(); 
         sb->Begin(); 
@@ -240,18 +277,16 @@ public:
         info += "FPS: " + ToString((int) GetFPS()); 
         info += "\n"; 
         info += "UPS: " + ToString((int) GetUPS()); 
-        sb->DrawString(Color::Black, 16, info.c_str(), 10, 20); 
+        sb->DrawString(Color::White, 16, info.c_str(), 10, 20); 
         // sb->Draw(TestTexture, 100, 200, 100, 100); 
         sb->End(); 
     }
 
     void GenWorld() 
     {
-        Random r; 
-
         WorldGenerator gen; 
         gen.AddRule(new SubdivideCellGenRule(WorldSize)); 
-        gen.AddRule(new CellDistortRule()); 
+        if (WorldSize > 1) gen.AddRule(new CellDistortRule()); 
         gen.AddRule(new CellRelaxRule(200)); 
         gen.AddRule(new BasicTerrainGenRule()); 
         World = gen.Generate();
@@ -264,17 +299,24 @@ public:
             sizeof(Cell) * World.GetCellCount() / 1024 / 1024 / 10.0
         ); 
 
+        GenMeshes(); 
+    }
+
+    void GenMeshes() 
+    {
+        Random r; 
+
         // stars 
         {
             Vector<Vector3> verts; 
             Vector<Vector4> colors; 
-            for (int i = 0; i < 10000; i++) 
+            for (int i = 0; i < 100000; i++) 
             {
                 verts.push_back(Normalized(Vector3(
                     r.NextFloat(), 
                     r.NextFloat(), 
                     r.NextFloat()
-                )) * 100); 
+                )) * 900); 
                 colors.push_back({1, 1, 1, 1}); 
             }
             StarMesh = new Mesh(); 
@@ -283,11 +325,6 @@ public:
             StarMesh->Update(); 
         }
 
-        GenMeshes(); 
-    }
-
-    void GenMeshes() 
-    {
         // points 
         {
             Vector<Vector3> verts; 
@@ -311,7 +348,7 @@ public:
             for (CellId i = 0; i < World.GetCellCount(); i++) 
             {
                 verts.push_back(World.GetPosition(i)*1.01); 
-                colors.push_back({0.2, 0.2, 0.2, 1}); 
+                colors.push_back({0.1, 0.1, 0.1, 1}); 
                 for (CellId ni = 0; ni < World.GetNeighborCount(i); ni++) 
                 {
                     CellId n = World.GetNeighbor(i, ni); 
@@ -362,16 +399,19 @@ public:
         // cells 
         {
             Vector<Vector3> verts; 
+            Vector<Vector3> normals; 
             Vector<Vector4> colors; 
             Vector<uint32> inds; 
             for (CellId i = 0; i < World.GetCellCount(); i++) 
             {
+                Vector3 normal = World.GetPosition(i); 
                 Vector<Vector3> bounds = World.GetBounds(i); 
                 unsigned start = verts.size(); 
                 unsigned index = start + 1; 
                 for (Vector3& v : bounds) 
                 {
                     verts.push_back(v); 
+                    normals.push_back(normal); 
                     colors.push_back(GetTerrainColor(World.GetTerrain(i))); 
                 }
                 for (unsigned v = 0; v < bounds.size() - 2; v++) 
@@ -383,6 +423,7 @@ public:
             }
             CellMesh = new Mesh(); 
             CellMesh->SetVertices(verts); 
+            CellMesh->SetNormals(normals); 
             CellMesh->SetColors(colors); 
             CellMesh->SetIndices(inds); 
             CellMesh->Update(); 
@@ -399,9 +440,15 @@ public:
     Ref<Geometry> Geom; 
     Ref<IndexBuffer> IB; 
     Ref<VertexBuffer> VB; 
-    Ref<Shader> BasicShader, TextShader; 
+    Ref<Shader> BasicShader, LightShader; 
     Ref<Texture2D> TestTexture; 
     Ref<Mesh> CubeMesh; 
+    bool DrawGrid = true; 
+    bool DrawConnections = false; 
+    bool DrawOutlines = true; 
+    bool DrawCells = true; 
+    bool DrawStars = true; 
+    bool DrawShaded = true; 
     // world gen 
     Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, FluidMesh, FluidVelMesh; 
     class World World; 

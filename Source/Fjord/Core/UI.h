@@ -38,7 +38,10 @@ namespace Fjord
 
         void SameLine(); 
 
+        void Separator(); 
+
         bool Button(const String& text); 
+        bool Checkbox(const String& text, bool* value); 
 
     }
 }
