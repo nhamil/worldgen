@@ -1,10 +1,14 @@
-#include "Fjord/Common.h" 
+#include "Fjord/Core/UI.h" 
 
+#include "Fjord/Common.h" 
 #include "Fjord/Core/Input.h" 
 #include "Fjord/Graphics/Color.h" 
 #include "Fjord/Graphics/Font.h" 
 #include "Fjord/Graphics/SpriteBatch.h" 
+#include "Fjord/Math/MathUtil.h" 
 #include "Fjord/Util/Memory.h" 
+
+#include <algorithm> 
 
 using namespace Fjord; 
 
@@ -17,34 +21,157 @@ namespace Fjord { namespace UI
     using Id = uint64; 
     static const Id NullId = 0; 
 
-    static int WindowPaddingX = 10, WindowPaddingY = 10; 
-    static int PaddingX = 10, PaddingY = 10; 
+    static uint64 NextZOrder = 0; 
 
-    static int WindowBorder = 2; 
-    static int WindowTitleHeight = 20; 
+    static uint64 GetNextZOrder() 
+    {
+        return NextZOrder++; 
+    }
+
+    struct Config 
+    {
+        struct 
+        {
+            // start 
+            int StartX = 20; 
+            int StartY = 20; 
+            int StartWidth = 300; 
+            int StartHeight = 300; 
+            // title 
+            int TitleHeight = 20; 
+            // border 
+            int BorderLeft = 2; 
+            int BorderTop = 2; 
+            int BorderRight = 2; 
+            int BorderBottom = 2; 
+            // padding 
+            int PaddingX = 10; 
+            int PaddingY = 10; 
+        } Window; 
+        struct 
+        {
+            int PaddingX = 10; 
+            int PaddingY = 10; 
+        } Widget;
+    };
+
+    static const Config DefaultConfig; 
+    static Config CurConfig; 
 
     struct Window 
     {
-        UI::Id Id; 
+        UI::Id Id = NullId; 
+        String Title; 
+        WindowFlag Flags = WindowFlagAutoResize; 
+        uint64 ZOrder = GetNextZOrder(); 
+        bool DragMode = false; 
         int X, Y, Width, Height; 
-        int CurX, CurY; 
-        int SameX, SameY; 
+        int CursorX, CursorY; 
+        int SameLineX, SameLineY; 
         int MouseX = 0, MouseY = 0; 
 
-        void AddItem(int w, int h) 
+        void ResetForFrame() 
         {
-            SameX = CurX + w + PaddingX; 
-            SameY = CurY; 
+            CursorX = X + CurConfig.Window.PaddingX; 
+            CursorY = Y + CurConfig.Window.PaddingY + CurConfig.Window.TitleHeight; 
+            SameLineX = CursorX; 
+            SameLineY = CursorY; 
+        }
+
+        bool IsAutoResizeEnabled() 
+        {
+            return Flags & WindowFlagAutoResize; 
+        }
+
+        void AddItem(int& x, int& y, int w, int h) 
+        {
+            x = CursorX; 
+            y = CursorY; 
+
+            // FJ_EFDEBUG("%d", Flags); 
+            if (IsAutoResizeEnabled()) 
+            {
+                Width = Max(Width, CursorX - X + w + CurConfig.Window.PaddingX); 
+                Height = Max(Height, CursorY - Y + h + CurConfig.Window.PaddingY); 
+                // FJ_EFDEBUG("auto resize to %d %d", Width, Height); 
+            }
+
+            SameLineX = CursorX + w + CurConfig.Window.PaddingX; 
+            SameLineY = CursorY; 
 
             // by default, next widget is on next line 
-            CurX = X + WindowPaddingX; 
-            CurY += h + PaddingY; 
+            CursorX = X + CurConfig.Window.PaddingX; 
+            CursorY += h + CurConfig.Widget.PaddingY; 
         }
 
         void SetSameLine() 
         {
-            CurX = SameX; 
-            CurY = SameY; 
+            CursorX = SameLineX; 
+            CursorY = SameLineY; 
+        }
+
+        Window() 
+        {
+            X = CurConfig.Window.StartX; 
+            Y = CurConfig.Window.StartY; 
+            Width = CurConfig.Window.StartWidth; 
+            Height = CurConfig.Window.StartHeight; 
+            ResetForFrame(); 
+        }
+
+        Window(const Window& other) = default; 
+    };
+
+    struct Bounds 
+    {
+        bool Enabled = false; 
+        int X = 0; 
+        int Y = 0; 
+        int W = INT_MAX; 
+        int H = INT_MAX; 
+
+        Bounds& Apply(int x, int y, int w, int h) 
+        {
+            if (!Enabled) 
+            {
+                X = x; 
+                Y = y; 
+                W = w; 
+                H = h; 
+            }
+            else 
+            {
+                int x1 = Max(X, x); 
+                int y1 = Max(Y, y); 
+                int x2 = Min(X + W, x + w); 
+                int y2 = Min(Y + H, y + h); 
+
+                X = x1; 
+                Y = y1; 
+                W = x2 - x1; 
+                H = y2 - y1; 
+            }
+            Enabled = true; 
+            return *this; 
+        }
+
+        Bounds& Apply(Window& w) 
+        {
+            return Apply(w.X, w.Y, w.Width, w.Height); 
+        }
+
+        Bounds& ApplyBorder(int left, int top, int right, int bottom) 
+        {
+            X += left; 
+            Y += top; 
+            W -= left + right; 
+            H -= top + bottom; 
+            return *this; 
+        }
+
+        Bounds& ApplyBorder(int amt) 
+        {
+            return ApplyBorder(amt, amt, amt, amt); 
         }
     };
 
@@ -92,10 +219,13 @@ namespace Fjord { namespace UI
     static State CurState, PrevState; 
 
     static Ref<SpriteBatch> Batch; 
-    static Ref<Font> CurFont; 
+    static Vector<Ref<FontFace>> FontStack; 
     static Vector<DrawCallType> DrawCallList; 
     static Vector<RectDrawCall> RectDrawCallList; 
     static Vector<TextDrawCall> TextDrawCallList; 
+
+    static Vector<int> IdStack; 
+    static uint64 IdOffset = 0; 
 
     static Id GetId(const String& name, Id parent = 0) 
     {
@@ -111,10 +241,30 @@ namespace Fjord { namespace UI
         hash ^= hash << 13; 
         hash ^= hash >> 7; 
         hash ^= hash << 17; 
-        return hash + parent; 
+        return hash + parent + IdOffset; 
     } 
 
-    static void AddRect(Window* window, const Color& color, int x, int y, int w, int h) 
+    static Id GetId(int i) 
+    {
+        char c[20]; 
+        snprintf(c, 20, "%d", i); 
+        return GetId(c); 
+    }
+
+    void PushId(int i) 
+    {
+        IdStack.push_back(i); 
+        IdOffset += GetId(i); 
+    }
+
+    void PopId() 
+    {
+        int i = IdStack.back(); 
+        IdStack.pop_back(); 
+        IdOffset -= GetId(i); 
+    }
+
+    static void AddRect(const Color& color, int x, int y, int w, int h, Bounds bounds) 
     {
         RectDrawCall call; 
         call.Color = color; 
@@ -122,35 +272,40 @@ namespace Fjord { namespace UI
         call.Y = y; 
         call.W = w; 
         call.H = h; 
-        call.Bound = window != nullptr; 
-        call.BoundX = window ? window->X + WindowBorder : -1; 
-        call.BoundY = window ? window->Y + WindowBorder + WindowTitleHeight : -1;  
-        call.BoundW = window ? window->Width - 2*WindowBorder : -1;  
-        call.BoundH = window ? window->Height - 2*WindowBorder : -1;  
+        call.Bound = bounds.Enabled; 
+        call.BoundX = bounds.X; 
+        call.BoundY = bounds.Y;  
+        call.BoundW = bounds.W;  
+        call.BoundH = bounds.H;  
         DrawCallList.push_back(DrawCallType::Rect); 
         RectDrawCallList.push_back(call); 
     }
 
-    static void AddText(Window* window, const Color& color, int x, int y, int w, int h, const String& str) 
+    static FontFace* GetFontFace() 
     {
-        StringMetrics sm = CurFont->GetMetrics(str); 
+        return FontStack.back(); 
+    }
+
+    static void AddText(const Color& color, int x, int y, int w, int h, const String& str, Bounds bounds) 
+    {
+        StringMetrics sm = GetFontFace()->GetMetrics(str); 
 
         TextDrawCall call; 
         call.Color = color; 
-        call.Font = CurFont->GetFace(); 
+        call.Font = GetFontFace(); 
         call.Text = str; 
         call.X = x + w*0.5 - sm.PxWidth*0.5; 
         call.Y = y + h*0.5 + sm.PxHeight*0.5; 
-        call.Bound = window != nullptr; 
-        call.BoundX = window ? window->X + WindowBorder : -1; 
-        call.BoundY = window ? window->Y + WindowBorder + WindowTitleHeight : -1;  
-        call.BoundW = window ? window->Width - 2*WindowBorder : -1;  
-        call.BoundH = window ? window->Height - 2*WindowBorder : -1;  
+        call.Bound = bounds.Enabled; 
+        call.BoundX = bounds.X; 
+        call.BoundY = bounds.Y;  
+        call.BoundW = bounds.W;  
+        call.BoundH = bounds.H;  
         DrawCallList.push_back(DrawCallType::Text); 
         TextDrawCallList.push_back(call); 
     }
 
-    static Window& GetWindow(Id id, int sx = 0, int sy = 0, int sw = 300, int sh = 300) 
+    static Window& GetWindow(Id id, WindowFlag flags = WindowFlagNone) 
     {
         auto it = CurState.Windows.find(id); 
 
@@ -166,36 +321,29 @@ namespace Fjord { namespace UI
                 // bring old window state to current context 
                 CurState.Windows[id] = itPrev->second; 
                 Window& w = CurState.Windows[id]; 
-                w.CurX = w.X + WindowPaddingX; 
-                w.CurY = w.Y + WindowPaddingY + WindowTitleHeight; 
+                w.ResetForFrame(); 
                 return w; 
             }
             else 
             {
                 // window does not exist, make it 
                 FJ_EFDEBUG("Creating new window for ID %llu", id); 
-                Window w; 
+                Window& w = CurState.Windows[id]; 
                 w.Id = id; 
-                w.X = sx; 
-                w.Y = sy; 
-                w.CurX = w.X + WindowPaddingX; 
-                w.CurY = w.Y + WindowPaddingY + WindowTitleHeight; 
-                w.Width = sw; 
-                w.Height = sh; 
-                CurState.Windows[id] = w; 
-                return CurState.Windows[id]; 
+                w.Flags = flags; 
+                return w; 
             }
         }
     }
 
-    static bool IsMouseInBounds(Window* window, int x, int y, int w, int h) 
+    static bool IsMouseInBounds(int x, int y, int w, int h, Bounds b = {}) 
     {
         if (CurState.MouseX < x || CurState.MouseX >= x + w) return false; 
         if (CurState.MouseY < y || CurState.MouseY >= y + h) return false; 
-        if (window) 
+        if (b.Enabled) 
         {
-            if (CurState.MouseX < window->X + WindowBorder || CurState.MouseX >= window->X + window->Width - WindowBorder) return false; 
-            if (CurState.MouseY < window->Y + WindowBorder + WindowTitleHeight || CurState.MouseY >= window->Y + window->Height - WindowBorder) return false; 
+            if (CurState.MouseX < b.X || CurState.MouseX >= b.X + b.W) return false; 
+            if (CurState.MouseY < b.Y || CurState.MouseY >= b.Y + b.H) return false; 
         }
         return true; 
     }
@@ -262,14 +410,27 @@ namespace Fjord { namespace UI
         }
     }
 
+    void PushFont(Font* font, int size) 
+    {
+        font = font ? font : Font::GetDefaultFont(); 
+        if (size == 0) 
+        {
+            size = Font::DefaultSize; 
+        }
+        FontStack.push_back(font->GetFace(size)); 
+    }
+
+    void PopFont() 
+    {
+        FontStack.pop_back(); 
+    }
+
     void StartFrame() 
     {
         auto* input = GetInput(); 
 
-        if (!CurFont) 
-        {
-            CurFont = Font::GetDefaultFont(); 
-        }
+        FontStack.clear(); 
+        PushFont(nullptr); 
 
         CurState.MouseX = (int) input->GetMouse().X; 
         CurState.MouseY = (int) input->GetMouse().Y; 
@@ -279,23 +440,17 @@ namespace Fjord { namespace UI
         DrawCallList.clear(); 
         RectDrawCallList.clear(); 
         TextDrawCallList.clear(); 
+
+        IdStack.clear(); 
+        IdOffset = 0; 
     }
 
     void FinishFrame() 
     {
         FJ_EASSERT(CurWindow == NullId); 
 
-        // if (CurState.Active != NullId) 
-        // {
-        //     FJ_EFDEBUG("Active : %llu", CurState.Active); 
-        // }
-
-        // if (CurState.Hot != NullId) 
-        // {
-        //     FJ_EFDEBUG("Hot    : %llu", CurState.Hot); 
-        // }
-
         PrevState = CurState; 
+        CurConfig = DefaultConfig; 
         CurState.Clear(); 
     }
 
@@ -315,6 +470,9 @@ namespace Fjord { namespace UI
 
         unsigned iRect = 0; 
         unsigned iText = 0; 
+
+        Batch->ClearBounds(); 
+        Batch->DrawString(Color::Black, "UI Draw Calls: " + ToString(DrawCallList.size()), 10, 55); 
 
         for (unsigned i = 0; i < DrawCallList.size(); i++) 
         {
@@ -361,28 +519,47 @@ namespace Fjord { namespace UI
             }
         }
 
-        Batch->ClearBounds(); 
-        Batch->DrawString(Color::Black, "UI Draw Calls: " + ToString(DrawCallList.size()), 10, 55); 
-
         Batch->End(); 
     }
 
-    void BeginWindow(const String& title, int startX, int startY, int sWidth, int sHeight) 
+    void SetNextWindowPosition(int x, int y) 
+    {
+        CurConfig.Window.StartX = x; 
+        CurConfig.Window.StartY = y; 
+    }
+
+    void SetNextWindowSize(int w, int h) 
+    {
+        CurConfig.Window.StartWidth = w; 
+        CurConfig.Window.StartHeight = h; 
+    }
+
+    void BeginWindow(const String& title, WindowFlag flags) 
     {
         FJ_EASSERT(CurWindow == NullId); 
 
         Id id = GetId(title); 
-        Window& w = GetWindow(id, startX, startY, sWidth, sHeight); 
+        Window& w = GetWindow(id, flags); 
+        w.Title = title; 
         
         CurWindow = id; 
-        // if (IsMouseInBounds(w.X, w.Y, w.Width, w.Height)) 
-        // {
-        //     Hot = id; 
-        // }
+        // FJ_EFDEBUG("%s: %d %d %d %d", title.c_str(), w.X, w.Y, w.Width, w.Height); 
 
-        AddRect(nullptr, {0.9f, 0.9f, 0.9f}, w.X, w.Y, w.Width, w.Height); 
-        AddRect(nullptr, {0.7f, 0.7f, 0.7f}, w.X, w.Y, w.Width, WindowTitleHeight); 
-        AddText(nullptr, Color::Black, w.X, w.Y, w.Width, WindowTitleHeight, title); 
+        if (w.DragMode) 
+        {
+            w.X = CurState.MouseX - w.MouseX; 
+            w.Y = CurState.MouseY - w.MouseY; 
+        }
+        w.ResetForFrame(); 
+
+        AddRect({0.9f, 0.9f, 0.9f}, w.X, w.Y, w.Width, w.Height, Bounds().Apply(w)); 
+        AddRect({0.7f, 0.7f, 0.7f}, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, Bounds().Apply(w)); 
+        AddText(Color::Black, w.X, w.Y, w.Width, CurConfig.Window.TitleHeight, w.Title, Bounds().Apply(w)); 
+
+        if (w.IsAutoResizeEnabled()) 
+        {
+            w.Width = w.Height = 0; 
+        }
     }
 
     void EndWindow() 
@@ -392,24 +569,23 @@ namespace Fjord { namespace UI
         Id id = CurWindow; 
         Window& w = GetWindow(id); 
 
-        SetHot(id, GetHot() == NullId && IsMouseInBounds(nullptr, w.X, w.Y, w.Width, WindowTitleHeight)); 
+        SetHot(id, GetHot() == NullId && IsMouseInBounds(w.X, w.Y, w.Width, CurConfig.Window.TitleHeight)); 
 
-        if (GetActive() == NullId && IsMouseJustDown() && IsMouseInBounds(nullptr, w.X, w.Y, w.Width, WindowTitleHeight))  
+        if (GetActive() == NullId && IsMouseJustDown() && IsMouseInBounds(w.X, w.Y, w.Width, w.Height))  
         {
-            FJ_EFDEBUG("active"); 
+            if (IsMouseInBounds(w.X, w.Y, w.Width, CurConfig.Window.TitleHeight)) 
+            {
+                w.DragMode = true; 
+            }
             SetActive(id, true); 
             w.MouseX = CurState.MouseX - w.X; 
             w.MouseY = CurState.MouseY - w.Y; 
         }
+
         if (IsMouseJustUp()) 
         {
             SetActive(id, false); 
-        }
-
-        if (IsActive(id)) 
-        {
-            w.X = CurState.MouseX - w.MouseX; 
-            w.Y = CurState.MouseY - w.MouseY; 
+            w.DragMode = false; 
         }
 
         CurWindow = NullId; 
@@ -422,21 +598,22 @@ namespace Fjord { namespace UI
         w.SetSameLine(); 
     }
 
-    static void RenderButton(Window& window, Id id, const String& text, int x, int y, int w, int h) 
+    static void RenderButton(Window& window, Id id, const String& text, int x, int y, int w, int h, Bounds b) 
     {
         if (IsActive(id)) 
         {
-            AddRect(&window, {0.3f, 0.3f, 0.3f}, x, y, w, h); 
+            AddRect({0.3f, 0.3f, 0.3f}, x, y, w, h, b); 
         }
         else if (IsHot(id)) 
         {
-            AddRect(&window, {0.35f, 0.3f, 1.0f}, x, y, w, h); 
+            AddRect({0.35f, 0.3f, 1.0f}, x, y, w, h, b); 
         }
         else 
         {
-            AddRect(&window, {0.5f, 0.5f, 1.0f}, x, y, w, h); 
+            AddRect({0.5f, 0.5f, 1.0f}, x, y, w, h, b); 
         }
-        AddText(&window, Color::Black, x, y, w, h, text); 
+        b.Apply(x, y, w, h); 
+        AddText(Color::Black, x, y, w, h, text, b); 
     }
 
     bool Button(const String& text) 
@@ -445,13 +622,18 @@ namespace Fjord { namespace UI
         Window& w = GetWindow(CurWindow); 
 
         Id id = GetId(text, CurWindow); 
-        int x = w.CurX; 
-        int y = w.CurY; 
+        int x, y;  
         int width = 100; 
         int height = 20; 
-        w.AddItem(width, height); 
+        w.AddItem(x, y, width, height); 
 
-        if (IsMouseInBounds(&w, x, y, width, height)) 
+        // FJ_EFDEBUG("%d %d %d %d", x, y, width, height); 
+
+        Bounds b; 
+        b.Apply(x, y, width, height); 
+        b.Apply(w); 
+
+        if (IsMouseInBounds(x, y, width, height, b)) 
         {
             SetHot(id, true); 
 
@@ -460,7 +642,7 @@ namespace Fjord { namespace UI
                 if (IsMouseJustUp()) 
                 {
                     SetActive(id, false); 
-                    RenderButton(w, id, text, x, y, width, height); 
+                    RenderButton(w, id, text, x, y, width, height, b); 
                     return true; 
                 }
             }
@@ -479,7 +661,7 @@ namespace Fjord { namespace UI
             SetActive(id, false); 
         }
 
-        RenderButton(w, id, text, x, y, width, height); 
+        RenderButton(w, id, text, x, y, width, height, b); 
         return false; 
     }
 

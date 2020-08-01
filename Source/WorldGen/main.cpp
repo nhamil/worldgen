@@ -132,18 +132,24 @@ public:
 
     virtual void UpdateGUI(float dt) override
     {
-        UI::BeginWindow("WorldGen", 20, 100, 120); 
-        if (UI::Button("Generate")) 
+        (void) dt; 
+
+        UI::SetNextWindowPosition(20, 100); 
+        UI::SetNextWindowSize(300, 200-10); 
+        UI::BeginWindow("WorldGen", UI::WindowFlagAutoResize); 
+        for (int i = 1; i <= 10; i++) 
         {
-            GenWorld(); 
-        }
-        if (UI::Button("My Button2")) 
-        {
-            FJ_FDEBUG("Pressed 2"); 
-        }
-        if (UI::Button("My Button3")) 
-        {
-            FJ_FDEBUG("Pressed 3"); 
+            UI::PushId(i); 
+            if (UI::Button("Gen Size " + ToString(i))) 
+            {
+                WorldSize = i; 
+                if (i >= 7) 
+                {
+                    FJ_INFO("This will take a while"); 
+                }
+                GenWorld(); 
+            }
+            UI::PopId(); 
         }
         UI::EndWindow(); 
     }
@@ -222,8 +228,8 @@ public:
 
         graphics->ClearTextures(); 
 
-        graphics->SetGeometry(EdgeMesh->GetGeometry()); 
-        graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
+        // graphics->SetGeometry(EdgeMesh->GetGeometry()); 
+        // graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
 
         graphics->SetGeometry(CellMesh->GetGeometry()); 
         graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
@@ -244,7 +250,7 @@ public:
         Random r; 
 
         WorldGenerator gen; 
-        gen.AddRule(new SubdivideCellGenRule(5)); 
+        gen.AddRule(new SubdivideCellGenRule(WorldSize)); 
         gen.AddRule(new CellDistortRule()); 
         gen.AddRule(new CellRelaxRule(200)); 
         gen.AddRule(new BasicTerrainGenRule()); 
@@ -399,6 +405,7 @@ public:
     // world gen 
     Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, FluidMesh, FluidVelMesh; 
     class World World; 
+    int WorldSize = 5; 
     // gui 
     Ref<Font> MyFont; 
     // Ref<Widget> UI, UI2; 

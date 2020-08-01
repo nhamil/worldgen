@@ -4,25 +4,41 @@
 
 #define FJ_BIT(x) (1 << (x)) 
 
-namespace Fjord { namespace UI 
-{
+namespace Fjord 
+{ 
 
-    enum WindowFlag 
+    class Font; 
+
+    namespace UI 
     {
-        WindowFlagAutoResize = FJ_BIT(1) 
-    };
 
-    void StartFrame(); 
-    void FinishFrame(); 
-    void Render(); 
+        enum WindowFlag 
+        {
+            WindowFlagNone = 0, 
+            WindowFlagAutoResize = FJ_BIT(0) 
+        };
 
-    bool HasActiveWidget(); 
+        void StartFrame(); 
+        void FinishFrame(); 
+        void Render(); 
 
-    void BeginWindow(const String& windowTitle, int startX, int startY, int startWidth = 300, int startHeight = 300); 
-    void EndWindow(); 
+        bool HasActiveWidget(); 
 
-    void SameLine(); 
+        void SetNextWindowPosition(int x, int y); 
+        void SetNextWindowSize(int w, int h); 
 
-    bool Button(const String& text); 
+        void PushId(int i); 
+        void PopId(); 
 
-}}
+        void PushFont(Font* font, int size = 0); 
+        void PopFont(); 
+
+        void BeginWindow(const String& title, WindowFlag flags = WindowFlagNone); 
+        void EndWindow(); 
+
+        void SameLine(); 
+
+        bool Button(const String& text); 
+
+    }
+}
