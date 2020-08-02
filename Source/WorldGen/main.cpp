@@ -24,6 +24,7 @@
 #include <Fjord/Util/ClassId.h> 
 #include <Fjord/Util/FileUtil.h> 
 #include <Fjord/Util/Random.h> 
+#include <Fjord/Util/Thread.h> 
 #include <Fjord/Util/Time.h> 
 
 #include "WorldGen/World.h" 
@@ -34,14 +35,30 @@
 using namespace Fjord; 
 using namespace std; 
 
+class TestThread : public Thread 
+{
+public: 
+    virtual void Run() override 
+    {
+        while (true) //!IsInterrupted()) 
+        {
+            FJ_FDEBUG("Hello, Thread"); 
+            FJ_FDEBUG("Interrupted: %d", IsInterrupted()); 
+            Sleep(1000); 
+        }
+    }
+}; 
+
 class Main : public Application 
 {
 public: 
+    // TestThread thread; 
+
     virtual void Init() override
     {
         Random r; 
 
-        FJ_ELOG_LEVEL(Info); 
+        // FJ_ELOG_LEVEL(Info); 
 
         FJ_INFO("Application initializing..."); 
 
@@ -112,6 +129,7 @@ public:
 
     virtual void Stop() override
     {
+        // FJ_DEBUG("Thread Join: %d", thread.Join()); 
         FJ_INFO("Finished successfully"); 
     }
 

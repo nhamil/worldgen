@@ -109,6 +109,7 @@ namespace Fjord
         }
 
         app->Stop();  
+        FJ_EFDEBUG("Stopping engine"); 
 
         return 0; 
     }
@@ -173,6 +174,11 @@ namespace Fjord
         if (!g_EngineLogger) g_EngineLogger = new Logger(LogLevel::Debug, "[ENG]"); 
         #endif 
         return g_EngineLogger; 
+    }
+
+    bool IsRunning() 
+    {
+        return g_Running; 
     }
 
     // GUIEnvironment* GetGUI() 
