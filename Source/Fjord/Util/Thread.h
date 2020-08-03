@@ -135,7 +135,7 @@ namespace Fjord
     template <class IndexType, class Function> 
     void ParallelFor(IndexType begin, IndexType end, const Function& func) 
     {
-        const unsigned NumThreads = (unsigned) (GetCPUCount() * 1.5); 
+        const unsigned NumThreads = (unsigned) (GetCPUCount() * 1.0); 
         Vector<Thread*> threads; 
 
         IndexType size = end - begin; 
