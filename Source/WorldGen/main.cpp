@@ -14,14 +14,6 @@
 #include <Fjord/Graphics/SpriteBatch.h> 
 #include <Fjord/Graphics/Texture2D.h> 
 #include <Fjord/Graphics/VertexBuffer.h> 
-// #include <Fjord/GUI/Button.h> 
-// #include <Fjord/GUI/Frame.h> 
-// #include <Fjord/GUI/Widget.h> 
-// #include <Fjord/GUI/GUIEnvironment.h> 
-// #include <Fjord/GUI/GUIRenderer.h> 
-// #include <Fjord/GUI/Label.h> 
-// #include <Fjord/GUI/Layout.h> 
-// #include <Fjord/GUI/Panel.h> 
 #include <Fjord/Util/ClassId.h> 
 #include <Fjord/Util/FileUtil.h> 
 #include <Fjord/Util/Random.h> 
@@ -58,8 +50,8 @@ public:
     {
         Random r; 
 
-        FJ_ELOG_LEVEL(Info); 
-        FJ_LOG_LEVEL(Debug); 
+        // FJ_ELOG_LEVEL(Info); 
+        // FJ_LOG_LEVEL(Debug); 
         
         FJ_INFO("Application initializing..."); 
 
@@ -384,9 +376,14 @@ public:
         if (WorldSize > 1) gen.AddRule(new CellDistortRule()); 
         gen.AddRule(new CellRelaxRule(50)); 
         gen.AddRule(new BasicTerrainGenRule()); 
-        World = gen.Generate();
+        class World w = gen.Generate();
 
-        FJ_DEBUG("Generated world!"); 
+        FJ_DEBUG("Calculating spatial geometry...");
+        w.UpdateSpatialGeometry(); 
+
+        FJ_DEBUG("Replacing previous world..."); 
+        World = w; 
+
         FJ_DEBUG("Generating meshes..."); 
 
         GenMeshData(); 

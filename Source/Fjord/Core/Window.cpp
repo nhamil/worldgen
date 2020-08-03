@@ -83,6 +83,8 @@ namespace Fjord
         SDL_GL_SetSwapInterval(1); 
 
         SDL_SetEventFilter((SDL_EventFilter) &WindowEventFilter, this); 
+
+        SetMode(WindowMode::Borderless); 
     }
 
     Window::~Window() 

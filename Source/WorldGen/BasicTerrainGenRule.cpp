@@ -123,11 +123,11 @@ void BasicTerrainGenRule::Apply(World& world)
 
         float mul = 1.0; 
 
-        float hNoise = FractalNoise(position, mul*2, 0.7, 6, Seed_) * 0.1; 
+        float hNoise = FractalNoise(position, mul*2, 0.7, 9, Seed_) * 0.1; 
 
-        float height = FractalNoise(position, mul, 0.65, 6, Seed_) * 0.5 + 0.5; 
+        float height = FractalNoise(position, mul, 0.65, 9, Seed_) * 0.5 + 0.5; 
         float heat = 1 - std::fabs(position.Y); 
-        float moisture = FractalNoise(position, 0.7, 0.5, 5, Seed_ * 1234) * 0.5 + 0.5; 
+        float moisture = FractalNoise(position, 0.7, 0.5, 9, Seed_ * 1234) * 0.5 + 0.5; 
 
         // world.SetHeight(cell, height); 
         // world.SetHeat(cell, heat); 

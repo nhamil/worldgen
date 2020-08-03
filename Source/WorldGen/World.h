@@ -5,6 +5,7 @@
 #include <Fjord/Graphics/Types.h> 
 #include <Fjord/Math/Vector3.h> 
 #include <Fjord/Math/Quaternion.h> 
+#include <Fjord/Util/KDTree.h> 
 
 using namespace Fjord; 
 
@@ -66,6 +67,7 @@ public:
     unsigned GetCellCount() const; 
     CellId AddCell(const Vector3& position); 
 
+    CellId GetCellIdPyPosition(const Vector3& position); 
     CellId GetCellIdPyPosition(const Vector3& position) const; 
 
     unsigned GetConnectionCount() const; 
@@ -105,7 +107,13 @@ public:
 
     void SetTerrain(CellId, Terrain terrain); 
 
+    /* Utilities */ 
+
+    void UpdateSpatialGeometry(); 
+
 private: 
     Vector<Cell> Cells_; 
     HashSet<Pair<CellId, CellId>, PairHash> Connections_; 
+    KDTree3<CellId> SearchTree_; 
+    bool UpdateTree_ = true; 
 };

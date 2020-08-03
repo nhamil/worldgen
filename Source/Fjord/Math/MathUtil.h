@@ -1,5 +1,7 @@
 #pragma once 
 
+#include <cmath> 
+
 #define FJ_PI (3.14159265358797323846264)
 #define FJ_2_PI (2 * FJ_PI)
 #define FJ_4_PI (4 * FJ_PI)
