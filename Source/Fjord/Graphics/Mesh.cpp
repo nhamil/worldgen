@@ -9,6 +9,26 @@
 namespace Fjord 
 {
 
+    bool MeshData::Apply(Mesh* mesh) const 
+    {
+        FJ_EASSERT(mesh); 
+        bool success = true; 
+
+        mesh->Clear(); 
+
+        if (Vertices.size()) mesh->SetVertices(Vertices); 
+        if (Normals.size()) mesh->SetNormals(Normals); 
+        if (Tangents.size()) mesh->SetTangents(Tangents); 
+        if (Colors.size()) mesh->SetColors(Colors); 
+        if (TexCoords.size()) mesh->SetTexCoords(TexCoords); 
+        if (Indices.size()) mesh->SetIndices(Indices); 
+
+        mesh->Update(); 
+
+        // TODO mesh->Set* should return whether successful or not 
+        return success; 
+    }
+
     Mesh::Mesh() 
     {
         Geometry_ = new Geometry(); 

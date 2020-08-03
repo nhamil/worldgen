@@ -9,6 +9,26 @@
 namespace Fjord 
 {
 
+    class Mesh; 
+
+    /** 
+     * A way to store mesh data on any thread. 
+     */ 
+    struct MeshData : public RefCounted 
+    {
+        Vector<uint32> Indices; 
+        Vector<Vector3> Vertices; 
+        Vector<Vector3> Normals; 
+        Vector<Vector3> Tangents; 
+        Vector<Vector4> Colors; 
+        Vector<Vector2> TexCoords; 
+
+        /** 
+         * Must be called from the main thread. 
+         */ 
+        bool Apply(Mesh* mesh) const; 
+    }; 
+
     class Mesh : public RefCounted
     {
     public: 

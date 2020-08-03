@@ -40,7 +40,7 @@ namespace Fjord
 
     double Random::NextDouble() 
     {
-        return (double) (NextLongLong() & 0x07FFFFFFFFFFFFFFULL) / (0x0800000000000000ULL) * 2 - 1;
+        return (double) (NextLongLong() & 0x07FFFFFFFFFFFFFFULL) / (0x0800000000000000ULL);
     }
 
 }

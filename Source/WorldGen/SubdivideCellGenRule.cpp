@@ -57,6 +57,7 @@ SubdivideCellGenRule::SubdivideCellGenRule(int iterations)
 void SubdivideCellGenRule::Apply(World& world) 
 {
     FJ_ASSERT(world.GetCellCount() == 0); 
+    FJ_DEBUG("Subdividing cells..."); 
 
     world.AddCell({ 0, 1, T}); // 0
     world.AddCell({ 0, 1,-T}); // 1 

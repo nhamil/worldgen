@@ -1,5 +1,6 @@
 #include "WorldGen/WorldGenerator.h" 
 
+#include <Fjord/Util/Thread.h> 
 #include <Fjord/Util/Time.h> 
 
 #define PRIME_0 1214520721ULL
@@ -107,9 +108,13 @@ BasicTerrainGenRule::BasicTerrainGenRule()
 
 void BasicTerrainGenRule::Apply(World& world) 
 {
+    FJ_DEBUG("Generating terrain..."); 
+
     int land = 0; 
     int water = 0; 
-    for (CellId cell = 0; cell < world.GetCellCount(); cell++) 
+    
+    // for (CellId cell = 0; cell < world.GetCellCount(); cell++) 
+    ParallelFor(CellId(0), CellId(world.GetCellCount()), [&](CellId cell)
     {
         Vector3 position = world.GetPosition(cell); 
 
@@ -160,10 +165,7 @@ void BasicTerrainGenRule::Apply(World& world)
                 world.SetTerrain(cell, Terrain::Snow); 
             }
         }
-    }
 
-    for (CellId cell = 0; cell < world.GetCellCount(); cell++) 
-    {
         if (world.GetTerrain(cell) == Terrain::DeepWater) 
         {
             for (unsigned i = 0; i < world.GetNeighborCount(cell); i++) 
@@ -174,7 +176,7 @@ void BasicTerrainGenRule::Apply(World& world)
                 }
             }
         }
-    }
+    });
 
     FJ_LOG(Debug, "Percent Water: %f%%", (float) water / (water + land) * 100); 
 }

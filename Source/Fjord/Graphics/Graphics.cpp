@@ -143,7 +143,7 @@ namespace Fjord
 
     void Graphics::Draw(Primitive prim, unsigned startInd, unsigned numInds) 
     {
-        FJ_ASSERT(CurShader_ && CurGeom_ && CurGeom_->HasUsableVertexBuffer()); 
+        FJ_EASSERT(CurShader_ && CurGeom_ && CurGeom_->HasUsableVertexBuffer()); 
 
         CurShader_->Update(); 
         CurGeom_->Update(); 
@@ -160,7 +160,7 @@ namespace Fjord
 
     void Graphics::DrawIndexed(Primitive prim, unsigned startInd, unsigned numInds) 
     {
-        FJ_ASSERT(CurShader_ && CurGeom_ && CurGeom_->HasUsableVertexBuffer() && CurGeom_->GetIndexBuffer()); 
+        FJ_EASSERT(CurShader_ && CurGeom_ && CurGeom_->HasUsableVertexBuffer() && CurGeom_->GetIndexBuffer()); 
 
         CurShader_->Update(); 
         CurGeom_->Update(); 

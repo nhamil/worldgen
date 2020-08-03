@@ -32,7 +32,8 @@ namespace Fjord
 
     private: 
         friend class Window; 
-        friend int Run(Application* app); 
+        friend void DoGameLoop(); 
+        friend int Run(Application*); 
 
         using IntSet = HashSet<int>; 
 

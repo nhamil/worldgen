@@ -11,6 +11,8 @@ CellDistortRule::CellDistortRule()
 
 void CellDistortRule::Apply(World& world) 
 {
+    FJ_DEBUG("Distorting cells..."); 
+
     unsigned distortions = (unsigned) (world.GetCellCount() * Ratio_); 
 
     for (CellId i = 0; i < distortions; i++) 

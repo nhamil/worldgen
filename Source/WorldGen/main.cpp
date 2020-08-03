@@ -35,18 +35,17 @@
 using namespace Fjord; 
 using namespace std; 
 
+class Main; 
+
 class TestThread : public Thread 
 {
 public: 
-    virtual void Run() override 
-    {
-        while (true) //!IsInterrupted()) 
-        {
-            FJ_FDEBUG("Hello, Thread"); 
-            FJ_FDEBUG("Interrupted: %d", IsInterrupted()); 
-            Sleep(1000); 
-        }
-    }
+    TestThread(Main* main) : Main_(main) {} 
+
+    virtual void Run() override; 
+
+private: 
+    Main* Main_; 
 }; 
 
 class Main : public Application 
@@ -58,8 +57,9 @@ public:
     {
         Random r; 
 
-        // FJ_ELOG_LEVEL(Info); 
-
+        FJ_ELOG_LEVEL(Info); 
+        FJ_LOG_LEVEL(Debug); 
+        
         FJ_INFO("Application initializing..."); 
 
         CubeMesh = new Mesh(); 
@@ -122,7 +122,36 @@ public:
 
         MyFont = new Font("Default"); 
 
-        GenWorld(); 
+        GenThread = new TestThread(this); 
+        GenThread->Start(); 
+
+        StarMeshData = new MeshData(); 
+        Vector<Vector3>& verts = StarMeshData->Vertices; 
+        Vector<Vector4>& colors = StarMeshData->Colors; 
+        verts.resize(100000); 
+        colors.resize(100000); 
+        // for (int i = 0; i < 100000; i++) 
+        float theta, phi; 
+        for (int i = 0; i < 100000; i++) 
+        {
+            // FJ_DEBUG("%f", r.NextFloat()); 
+            theta = 2 * FJ_PI * r.NextFloat(); 
+            phi = std::acos(2 * r.NextFloat() - 1.0f); 
+            verts[i] = Normalized(Vector3(
+                std::cos(theta) * std::sin(phi), 
+                std::sin(theta) * std::sin(phi), 
+                std::cos(phi) 
+            )) * 900; 
+            // verts[i] = Normalized(Quaternion::AxisAngle(Normalized(Vector3(
+            //     r.NextFloat(), 
+            //     r.NextFloat(), 
+            //     r.NextFloat()
+            // )), r.NextFloat() * FJ_2_PI) * Vector3::Right) * 900; 
+            colors[i] = {1, 1, 1, 1}; 
+        } 
+        StarMesh = new Mesh(); 
+        StarMeshData->Apply(StarMesh); 
+        StarMeshData = nullptr; 
 
         FJ_INFO("Done!"); 
     }
@@ -166,30 +195,23 @@ public:
         WorldSize = (int) size; 
 
         UI::SliderFloat("Zoom Sensitivity", &ZoomSens, 0.001, 2, 0, "%0.3f"); 
-        if (UI::Button("Generate")) GenWorld(); 
+        if (TicksToGenMeshes_ > 0) 
+        {
+            UI::Button("Finalizing..."); 
+        }
+        else if (RegenMeshes_) 
+        {
+            UI::Button("Generating..."); 
+        }
+        else if (UI::Button("Generate"))
+        {
+            RegenMeshes_ = true; 
+            GenThread = new TestThread(this); 
+            GenThread->Start(); 
+        }
         UI::SameLine(); 
         if (UI::Button("Reset Zoom")) Zoom = 1.0; 
 
-        // gen world 
-        // for (int i = 0; i <= 10; i++) 
-        // {
-        //     UI::PushId(i); 
-        //     if (i % 2 == 0) UI::SameLine(); 
-        //     if (UI::Button("Gen Size " + ToString(i))) 
-        //     {
-        //         WorldSize = i; 
-        //         if (i >= 9) 
-        //         {
-        //             FJ_INFO("This will take a very long time"); 
-        //         }
-        //         else if (i >= 7) 
-        //         {
-        //             FJ_INFO("This will take a while"); 
-        //         }
-        //         GenWorld(); 
-        //     }
-        //     UI::PopId(); 
-        // }
         UI::EndWindow(); 
     }
 
@@ -211,11 +233,6 @@ public:
             Vector2 dMouse = input->GetMouseMove(); 
             DYaw = dMouse.Y * mouseScale; 
             DPitch = -dMouse.X * mouseScale; 
-        }
-
-        if (input->GetKey(KeyG)) 
-        {
-            GenWorld(); 
         }
 
         Zoom *= 1 - (0.1 * input->GetMouseWheel()) * ZoomSens; 
@@ -255,6 +272,19 @@ public:
             Vector3 up = Normalized(Cross(right, LightDirection)); 
             LightDirection = Normalized(Quaternion::AxisAngle(up, 45 * FJ_TO_RAD) * LightDirection); 
         }
+
+        if (TicksToGenMeshes_ > 0) TicksToGenMeshes_--; 
+
+        if (TicksToGenMeshes_ == 0 && RegenMeshes_ && GenThread && !GenThread->IsRunning()) 
+        {
+            TicksToGenMeshes_ = -1; 
+            RegenMeshes_ = false; 
+            GenMeshes(); 
+        }
+        else if (TicksToGenMeshes_ == -1 && RegenMeshes_ && GenThread && !GenThread->IsRunning()) 
+        {
+            TicksToGenMeshes_ = 2; 
+        }
     }
 
     virtual void Render() override 
@@ -271,13 +301,14 @@ public:
         Matrix4 tfm = Matrix4::Perspective(15.0 * Zoom * FJ_TO_RAD, 1.333, 0.1, 1000.0); 
         tfm *= Matrix4::LookAt(CamPos, Vector3::Zero); 
         tfm *= Matrix4::RotationY(90 * FJ_TO_RAD); 
+        // tfm *= Matrix4::RotationY(GetTimeSeconds()); 
 
         graphics->ClearTextures(); 
 
         BasicShader->SetMatrix4("u_Model", tfm); 
         graphics->SetShader(BasicShader); 
 
-        if (DrawStars) 
+        if (DrawStars && StarMesh) 
         {
             graphics->SetGeometry(StarMesh->GetGeometry()); 
             graphics->Draw(Primitive::Points, 0, StarMesh->GetVertexCount()); 
@@ -289,19 +320,19 @@ public:
         //     graphics->Draw(Primitive::Points, 0, PointMesh->GetVertexCount()); 
         // }
 
-        if (DrawCells && !DrawShaded) 
+        if (DrawCells && !DrawShaded && CellMesh) 
         {
             graphics->SetGeometry(CellMesh->GetGeometry()); 
             graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
         }
 
-        if (DrawConnections) 
+        if (DrawConnections && ConnMesh) 
         {
             graphics->SetGeometry(ConnMesh->GetGeometry()); 
             graphics->DrawIndexed(Primitive::Lines, 0, ConnMesh->GetIndexCount()); 
         }
 
-        if (DrawOutlines) 
+        if (DrawOutlines && EdgeMesh) 
         {
             graphics->SetGeometry(EdgeMesh->GetGeometry()); 
             graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
@@ -311,7 +342,7 @@ public:
         LightShader->SetVector3("u_LightDirection", LightDirection); 
         graphics->SetShader(LightShader); 
 
-        if (DrawCells && DrawShaded) 
+        if (DrawCells && DrawShaded && CellMesh) 
         {
             graphics->SetGeometry(CellMesh->GetGeometry()); 
             graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
@@ -330,6 +361,8 @@ public:
 
     void GenWorld() 
     {
+        GenTime = GetTimeSeconds(); 
+
         WorldGenerator gen; 
         gen.AddRule(new SubdivideCellGenRule(WorldSize)); 
         if (WorldSize > 1) gen.AddRule(new CellDistortRule()); 
@@ -337,143 +370,183 @@ public:
         gen.AddRule(new BasicTerrainGenRule()); 
         World = gen.Generate();
 
-        FJ_LOG(Debug, 
-            "Created world with %u cell and %u connections (%dkb, %0.1f seconds at 10MB/s)", 
-            World.GetCellCount(), 
-            World.GetConnectionCount(), 
-            sizeof(Cell) * World.GetCellCount() / 1024, 
-            sizeof(Cell) * World.GetCellCount() / 1024 / 1024 / 10.0
-        ); 
+        FJ_DEBUG("Generated world!"); 
+        FJ_DEBUG("Generating meshes..."); 
 
-        GenMeshes(); 
+        GenMeshData(); 
     }
 
-    void GenMeshes() 
+    void GenMeshData() 
     {
         Random r; 
 
-        // stars 
-        {
-            Vector<Vector3> verts; 
-            Vector<Vector4> colors; 
-            for (int i = 0; i < 100000; i++) 
-            {
-                verts.push_back(Normalized(Vector3(
-                    r.NextFloat(), 
-                    r.NextFloat(), 
-                    r.NextFloat()
-                )) * 900); 
-                colors.push_back({1, 1, 1, 1}); 
-            }
-            StarMesh = new Mesh(); 
-            StarMesh->SetVertices(verts); 
-            StarMesh->SetColors(colors); 
-            StarMesh->Update(); 
-        }
+        // // points 
+        // {
+        //     FJ_DEBUG("Generating point mesh..."); 
+        //     PointMeshData = new MeshData(); 
+        //     Vector<Vector3>& verts = PointMeshData->Vertices; 
+        //     Vector<Vector4>& colors = PointMeshData->Colors; 
+        //     verts.resize(World.GetCellCount()); 
+        //     colors.resize(World.GetCellCount()); 
+        //     // for (CellId i = 0; i < World.GetCellCount(); i++) 
+        //     ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
+        //     {
+        //         verts[i] = World.GetPosition(i); 
+        //         colors[i] = {1, 1, 1, 1}; 
+        //     });
+        // }
 
-        // points 
+        FJ_DEBUG("Generating connection mesh..."); 
+
+        unsigned neighborCount = 0; 
+        Vector<unsigned> neighborIndex; neighborIndex.reserve(World.GetConnectionCount()); 
+        for (CellId i = 0; i < World.GetCellCount(); i++) 
         {
-            Vector<Vector3> verts; 
-            Vector<Vector4> colors; 
-            for (CellId i = 0; i < World.GetCellCount(); i++) 
-            {
-                verts.push_back(World.GetPosition(i)); 
-                colors.push_back({1, 1, 1, 1}); 
-            }
-            PointMesh = new Mesh(); 
-            PointMesh->SetVertices(verts); 
-            PointMesh->SetColors(colors); 
-            PointMesh->Update(); 
+            neighborIndex.push_back(neighborCount); 
+            neighborCount += World.GetNeighborCount(i); 
         }
 
         // connections 
         {
-            Vector<Vector3> verts; 
-            Vector<Vector4> colors; 
-            Vector<uint32> inds; 
-            for (CellId i = 0; i < World.GetCellCount(); i++) 
+            ConnMeshData = new MeshData(); 
+            Vector<Vector3>& verts = ConnMeshData->Vertices; 
+            Vector<Vector4>& colors = ConnMeshData->Colors; 
+            Vector<uint32>& inds = ConnMeshData->Indices; 
+            verts.resize(World.GetCellCount()); 
+            colors.resize(World.GetCellCount()); 
+            // TODO uses more memory than is needed
+            inds.resize(neighborCount * 2); 
+            // for (CellId i = 0; i < World.GetCellCount(); i++) 
+            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
             {
-                verts.push_back(World.GetPosition(i)*1.01); 
-                colors.push_back({0.1, 0.1, 0.1, 1}); 
+                verts[i] = World.GetPosition(i)*1.01; 
+                colors[i] = {0.1, 0.1, 0.1, 1}; 
+                unsigned nOffset = neighborIndex[i] * 2; 
                 for (CellId ni = 0; ni < World.GetNeighborCount(i); ni++) 
                 {
                     CellId n = World.GetNeighbor(i, ni); 
                     if (i < n) 
                     {
-                        inds.push_back(i); 
-                        inds.push_back(n); 
+                        inds[nOffset++] = i; 
+                        inds[nOffset++] = n; 
                     }
                 }
-            }
-            ConnMesh = new Mesh(); 
-            ConnMesh->SetVertices(verts); 
-            ConnMesh->SetColors(colors); 
-            ConnMesh->SetIndices(inds); 
-            ConnMesh->Update(); 
+            }); 
         }
+
+        FJ_DEBUG("Generating outline mesh..."); 
 
         // edges 
         {
-            Vector<Vector3> verts; 
-            Vector<Vector4> colors; 
-            Vector<uint32> inds; 
-            for (CellId i = 0; i < World.GetCellCount(); i++) 
+            EdgeMeshData = new MeshData(); 
+            Vector<Vector3>& verts = EdgeMeshData->Vertices; 
+            Vector<Vector4>& colors = EdgeMeshData->Colors; 
+            Vector<uint32>& inds = EdgeMeshData->Indices; 
+            verts.resize(neighborCount); 
+            colors.resize(neighborCount); 
+            inds.resize(neighborCount * 2); 
+            // for (CellId i = 0; i < World.GetCellCount(); i++) 
+            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
             {
                 Vector<Vector3> bounds = World.GetBounds(i); 
-                unsigned start = verts.size(); 
+                unsigned start = neighborIndex[i]; //verts.size(); 
                 unsigned index = start; 
                 for (Vector3& v : bounds) 
                 {
-                    verts.push_back(v*1.001); 
-                    colors.push_back({0, 0, 0, 1}); 
+                    verts[index] = v*1.001; 
+                    colors[index++] = {0, 0, 0, 1}; 
                 }
+
+                index = start; 
+
+                unsigned ind = neighborIndex[i] * 2; 
                 for (unsigned v = 0; v < bounds.size() - 1; v++) 
                 {
-                    inds.push_back(index++); 
-                    inds.push_back(index); 
+                    inds[ind++] = (index++); 
+                    inds[ind++] = (index); 
                 }
-                inds.push_back(start); 
-                inds.push_back(start+bounds.size()-1); 
-            }
-            EdgeMesh = new Mesh(); 
-            EdgeMesh->SetVertices(verts); 
-            EdgeMesh->SetColors(colors); 
-            EdgeMesh->SetIndices(inds); 
-            EdgeMesh->Update(); 
+                inds[ind++] = (start); 
+                inds[ind++] = (start+bounds.size()-1); 
+            }); 
         }
+
+        FJ_DEBUG("Generating cell mesh..."); 
 
         // cells 
         {
-            Vector<Vector3> verts; 
-            Vector<Vector3> normals; 
-            Vector<Vector4> colors; 
-            Vector<uint32> inds; 
-            for (CellId i = 0; i < World.GetCellCount(); i++) 
+            CellMeshData = new MeshData(); 
+            Vector<Vector3>& verts = CellMeshData->Vertices; 
+            Vector<Vector3>& normals = CellMeshData->Normals; 
+            Vector<Vector4>& colors = CellMeshData->Colors; 
+            Vector<uint32>& inds = CellMeshData->Indices; 
+            // verts.reserve(World.GetCellCount() * 6); 
+            // colors.reserve(World.GetCellCount() * 6); 
+            // normals.reserve(World.GetCellCount() * 6); 
+            // inds.reserve(World.GetCellCount() * 6 * 3); 
+            verts.resize(neighborCount); 
+            normals.resize(neighborCount); 
+            colors.resize(neighborCount); 
+            inds.resize((neighborCount - World.GetCellCount()*2) * 3); 
+            // for (CellId i = 0; i < World.GetCellCount(); i++) 
+            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
             {
                 Vector3 normal = World.GetPosition(i); 
                 Vector<Vector3> bounds = World.GetBounds(i); 
-                unsigned start = verts.size(); 
-                unsigned index = start + 1; 
+                unsigned start = neighborIndex[i]; //verts.size(); 
+                unsigned index = start; 
                 for (Vector3& v : bounds) 
                 {
-                    verts.push_back(v); 
-                    normals.push_back(normal); 
-                    colors.push_back(GetTerrainColor(World.GetTerrain(i))); 
+                    verts[index] = v; 
+                    normals[index] = normal; 
+                    colors[index++] = GetTerrainColor(World.GetTerrain(i)); 
                 }
+
+                index = start + 1; 
+                
+                unsigned ind = (neighborIndex[i] - i*2) * 3; 
                 for (unsigned v = 0; v < bounds.size() - 2; v++) 
                 {
-                    inds.push_back(start); 
-                    inds.push_back(index++); 
-                    inds.push_back(index); 
+                    inds[ind++] = (start); 
+                    inds[ind++] = (index++); 
+                    inds[ind++] = (index); 
                 }
-            }
-            CellMesh = new Mesh(); 
-            CellMesh->SetVertices(verts); 
-            CellMesh->SetNormals(normals); 
-            CellMesh->SetColors(colors); 
-            CellMesh->SetIndices(inds); 
-            CellMesh->Update(); 
+            }); 
         }
+    }
+
+    void GenMeshes() 
+    {
+        FJ_DEBUG("Finalizing..."); 
+
+        // StarMesh = new Mesh(); 
+        // StarMeshData->Apply(StarMesh); 
+        // StarMeshData = nullptr; 
+
+        // PointMesh = new Mesh(); 
+        // PointMeshData->Apply(PointMesh); 
+        // PointMeshData = nullptr; 
+
+        ConnMesh = new Mesh(); 
+        ConnMeshData->Apply(ConnMesh); 
+        ConnMeshData = nullptr; 
+
+        EdgeMesh = new Mesh(); 
+        EdgeMeshData->Apply(EdgeMesh); 
+        EdgeMeshData = nullptr; 
+
+        CellMesh = new Mesh(); 
+        CellMeshData->Apply(CellMesh); 
+        CellMeshData = nullptr; 
+
+        GenTime = GetTimeSeconds() - GenTime; 
+
+        FJ_LOG(Debug, 
+            "Done! Created world with %u cell and %u connections in %0.1f seconds (%dkb)", 
+            World.GetCellCount(), 
+            World.GetConnectionCount(), 
+            GenTime, 
+            sizeof(Cell) * World.GetCellCount() / 1024 
+        ); 
     }
 
     // camera
@@ -483,6 +556,9 @@ public:
     float DYaw = 0, DPitch = 0; 
     Quaternion CamQuat; 
     // graphics 
+    bool RegenMeshes_ = true; 
+    int TicksToGenMeshes_ = -1; 
+    double GenTime = 0; 
     Ref<Geometry> Geom; 
     Ref<IndexBuffer> IB; 
     Ref<VertexBuffer> VB; 
@@ -498,13 +574,21 @@ public:
     bool CameraLight = false; 
     Vector3 LightDirection = Vector3::Right; 
     // world gen 
+    Ref<MeshData> PointMeshData, ConnMeshData, EdgeMeshData, CellMeshData, StarMeshData; 
     Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, FluidMesh, FluidVelMesh; 
     class World World; 
     int WorldSize = 5; 
+    Ref<Thread> GenThread; 
     // gui 
     Ref<Font> MyFont; 
     float ZoomSens = 1.0; 
     // Ref<Widget> UI, UI2; 
 }; 
+
+void TestThread::Run() 
+{
+    Main_->RegenMeshes_ = true; 
+    Main_->GenWorld(); 
+}
 
 ENGINE_MAIN_CLASS(Main) 

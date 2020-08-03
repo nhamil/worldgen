@@ -2,7 +2,6 @@
 
 #include "Fjord/Common.h" 
 #include "Fjord/Core/Input.h" 
-#include "Fjord/Util/Thread.h" 
 
 #include <SDL2/SDL.h> 
 
@@ -17,8 +16,6 @@ namespace Fjord
         Window(const char* title, int width = 800, int height = 600); 
         ~Window(); 
 
-        void StartPollingThread(); 
-
         void SwapBuffers(); 
         void Poll(); 
 
@@ -31,13 +28,11 @@ namespace Fjord
         }
 
     private: 
-        Mutex EventMutex_; 
         int Width_; 
         int Height_; 
         Input Input_; 
         SDL_Window* Window_; 
         SDL_GLContext GLContext_; 
-        WindowEventList* EventList_; 
     };
 
 }

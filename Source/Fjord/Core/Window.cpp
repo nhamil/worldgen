@@ -2,13 +2,28 @@
 
 #include "Fjord/Core/Input.h" 
 #include "Fjord/Graphics/OpenGL.h" 
+#include "Fjord/Util/Thread.h" 
 
 #include <iostream> 
+#include <queue> 
 
 #define KEY_MAP_SIZE 4096
 
 namespace Fjord 
 {
+
+    void DoGameLoop(); 
+
+    int WindowEventFilter(void* self, const SDL_Event* event) 
+    {
+        if (event->type == SDL_WINDOWEVENT &&
+        event->window.event == SDL_WINDOWEVENT_MOVED)
+        {
+            DoGameLoop(); 
+        }
+
+        return 1;
+    }
 
     static bool s_SDLInitiated = false; 
 
@@ -18,7 +33,7 @@ namespace Fjord
     {
         if (code >= KEY_MAP_SIZE) 
         {
-            FJ_EFLOG(Warn, "Key out of bounds: %d", code); 
+            // FJ_EFLOG(Warn, "Key out of bounds: %d", code); 
             return KeyUnknown; 
         }
 
@@ -64,6 +79,8 @@ namespace Fjord
         glewInit(); 
 
         SDL_GL_SetSwapInterval(0); 
+
+        SDL_SetEventFilter((SDL_EventFilter) &WindowEventFilter, this); 
     }
 
     Window::~Window() 
@@ -78,10 +95,10 @@ namespace Fjord
     }
 
     void Window::Poll() 
-    {
+    { 
         SDL_Event e; 
         while (SDL_PollEvent(&e)) 
-        {
+        { 
             switch (e.type) 
             {
                 case SDL_QUIT: 

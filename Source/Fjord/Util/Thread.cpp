@@ -14,6 +14,33 @@ namespace Fjord
         SDL_Delay(millis); 
     }
 
+    void SetThreadPriority(ThreadPriority priority) 
+    {
+        switch (priority) 
+        {
+            case ThreadPriority::Highest: 
+                SDL_SetThreadPriority(SDL_THREAD_PRIORITY_TIME_CRITICAL); 
+                break; 
+            case ThreadPriority::High: 
+                SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH); 
+                break; 
+            case ThreadPriority::Normal: 
+                SDL_SetThreadPriority(SDL_THREAD_PRIORITY_NORMAL); 
+                break; 
+            case ThreadPriority::Low: 
+            case ThreadPriority::Lowest: 
+                SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW); 
+                break; 
+        }
+    }
+
+    unsigned GetCPUCount() 
+    {
+        int count = SDL_GetCPUCount(); 
+        if (count < 1) count = 1; 
+        return count; 
+    }
+
     Mutex::Mutex() 
     {
         Handle_ = SDL_CreateMutex(); 
@@ -50,7 +77,7 @@ namespace Fjord
         Mutex_.Unlock(); 
     }
 
-    static int RunThreadFunc(void* data) 
+    int RunThreadFunc(void* data) 
     {
         Thread* thread = (Thread*) data; 
 
@@ -60,7 +87,9 @@ namespace Fjord
             return -1; 
         }
 
-        thread->Run(); 
+        SetThreadPriority(thread->GetPriority()); 
+
+        thread->RunInternal(); 
         return 0; 
     } 
 
@@ -116,20 +145,26 @@ namespace Fjord
 
     Thread::~Thread() 
     {
-        FJ_EFDEBUG("dtor"); 
         if (Handle_ != nullptr) 
         {
             Interrupt(); 
+            Detach(); 
         }
     }
 
-    void Thread::Run() 
+    void Thread::Run() {}
+
+    void Thread::RunInternal() 
     {
         if (Runnable_) 
         {
             Runnable_->Run(); 
         }
-        // Join(); 
+        else 
+        {
+            Run(); 
+        }
+        Running_ = false; 
     }
 
     bool Thread::Start() 
@@ -140,8 +175,15 @@ namespace Fjord
             return false; 
         }
 
+        Running_ = true; 
+
         Handle_ = SDL_CreateThread(RunThreadFunc, Name_.c_str(), this); 
         return true; 
+    }
+
+    bool Thread::IsRunning() 
+    {
+        return Running_; 
     }
 
     bool Thread::Join() 
@@ -152,12 +194,20 @@ namespace Fjord
             return false; 
         }
 
-        Interrupt(); 
-        FJ_EFDEBUG("Waiting"); 
         SDL_WaitThread((SDL_Thread*) Handle_, nullptr); 
-        FJ_EFDEBUG("Waiting done"); 
-        // SDL_DetachThread((SDL_Thread*) Handle_); 
-        // TODO look at status
+        Handle_ = nullptr; 
+        return true; 
+    }
+
+    bool Thread::Detach() 
+    {
+        if (Handle_ == nullptr) 
+        {
+            FJ_EFWARN("Attempted to detach thread that is not running"); 
+            return false; 
+        }
+
+        SDL_DetachThread((SDL_Thread*) Handle_); 
         Handle_ = nullptr; 
         return true; 
     }
@@ -173,6 +223,16 @@ namespace Fjord
     {
         MutexLock lock(Mutex_); 
         Interrupted_ = true; 
+    }
+
+    void Thread::SetPriority(ThreadPriority p) 
+    {
+        Priority_ = p; 
+    }
+
+    ThreadPriority Thread::GetPriority() 
+    {
+        return Priority_; 
     }
 
 }
