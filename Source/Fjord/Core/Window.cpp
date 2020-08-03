@@ -58,7 +58,9 @@ namespace Fjord
     }
 
     Window::Window(const char* title, int width, int height) 
-        : Width_(width) 
+        : VSync_(true)
+        , Mode_(WindowMode::Windowed)
+        , Width_(width) 
         , Height_(height) 
     {
         InitSDL(); 
@@ -69,7 +71,7 @@ namespace Fjord
             SDL_WINDOWPOS_CENTERED, 
             width, 
             height, 
-            SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN// | SDL_WINDOW_MOUSE_CAPTURE 
+            SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE 
         ); 
         SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1"); 
         // SDL_CaptureMouse(SDL_TRUE); 
@@ -78,7 +80,7 @@ namespace Fjord
         glewExperimental = GL_TRUE; 
         glewInit(); 
 
-        SDL_GL_SetSwapInterval(0); 
+        SDL_GL_SetSwapInterval(1); 
 
         SDL_SetEventFilter((SDL_EventFilter) &WindowEventFilter, this); 
     }
@@ -89,9 +91,74 @@ namespace Fjord
         SDL_DestroyWindow(Window_); 
     }
 
+    WindowMode Window::GetMode() const 
+    {
+        return Mode_; 
+    }
+
+    void Window::SetVSync(bool enabled) 
+    {
+        if (VSync_ == enabled) return; 
+        VSync_ = enabled; 
+    }
+
+    bool Window::IsVSyncEnabled() const 
+    {
+        return VSync_; 
+    }
+
+    void Window::SetMode(WindowMode mode) 
+    {
+        if (Mode_ != mode) 
+        {
+            if (Mode_ == WindowMode::Windowed) 
+            {
+                Width_ = GetWidth(); 
+                Height_ = GetHeight(); 
+                SDL_GetWindowPosition(Window_, &X_, &Y_); 
+            }
+            Mode_ = mode; 
+            SDL_Rect b; 
+            switch (mode) 
+            {
+                case WindowMode::Windowed: 
+                    SDL_SetWindowBordered(Window_, SDL_TRUE); 
+                    SDL_SetWindowFullscreen(Window_, 0); 
+                    SDL_SetWindowSize(Window_, Width_, Height_); 
+                    SDL_SetWindowPosition(Window_, X_, Y_); 
+                    break; 
+                case WindowMode::Fullscreen: 
+                    SDL_SetWindowFullscreen(Window_, SDL_WINDOW_FULLSCREEN_DESKTOP); 
+                    break; 
+                case WindowMode::Borderless: 
+                    SDL_GetDisplayBounds(SDL_GetWindowDisplayIndex(Window_), &b); 
+                    SDL_SetWindowFullscreen(Window_, 0); 
+                    SDL_SetWindowBordered(Window_, SDL_FALSE); 
+                    SDL_SetWindowPosition(Window_, b.x, b.y); 
+                    SDL_SetWindowSize(Window_, b.w, b.h); 
+                    break; 
+            }
+        }
+    }
+
+    int Window::GetWidth() const 
+    {
+        int w; 
+        SDL_GetWindowSize(Window_, &w, nullptr); 
+        return w; 
+    }
+
+    int Window::GetHeight() const 
+    {
+        int h; 
+        SDL_GetWindowSize(Window_, nullptr, &h); 
+        return h; 
+    }
+
     void Window::SwapBuffers() 
     {
         SDL_GL_SwapWindow(Window_); 
+        SDL_GL_SetSwapInterval(VSync_ ? 1 : 0); 
     }
 
     void Window::Poll() 

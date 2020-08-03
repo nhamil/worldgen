@@ -30,12 +30,40 @@ namespace Fjord
         SetDepthTest(true); 
         GLCALL(glEnable(GL_BLEND));
         GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); 
-        GLCALL(glEnable(GL_SCISSOR_TEST)); 
+        // GLCALL(glEnable(GL_SCISSOR_TEST)); 
     }
 
     Graphics::~Graphics() 
     {
         
+    }
+
+    void Graphics::BeginFrame() 
+    {
+        SetClearColor(Color::Black); 
+        Clear(true, true); 
+        ResetViewport(); 
+        ResetClip(); 
+    }
+
+    void Graphics::EndFrame() 
+    {
+
+    }
+
+    int Graphics::GetWidth() 
+    {
+        return GetWindow()->GetWidth(); 
+    }
+
+    int Graphics::GetHeight() 
+    {
+        return GetWindow()->GetHeight(); 
+    }
+
+    float Graphics::GetAspectRatio() 
+    {
+        return (float) GetWidth() / GetHeight(); 
     }
 
     void Graphics::SetViewport(int x, int y, int w, int h) 
@@ -48,8 +76,7 @@ namespace Fjord
 
     void Graphics::ResetViewport() 
     {
-        auto* w = GetWindow(); 
-        GLCALL(glViewport(0, 0, w->GetWidth(), w->GetHeight())); 
+        GLCALL(glViewport(0, 0, GetWidth(), GetHeight())); 
     }
 
     void Graphics::SetClip(int x, int y, int w, int h) 

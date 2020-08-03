@@ -349,7 +349,6 @@ namespace Fjord
         if (CurRect_ == 0) return; 
 
         auto graphics = GetGraphics(); 
-        auto window = GetWindow(); 
 
         graphics->SetDepthTest(false); 
 
@@ -358,8 +357,8 @@ namespace Fjord
         Shader* shader = TextMode_ ? TextShader_ : Shader_; 
 
         shader->SetMatrix4("u_Matrix", Matrix4::Orthographic(
-            {0, (float) window->GetHeight(), 1}, 
-            {(float) window->GetWidth(), 0, -1}
+            {0, (float) graphics->GetHeight(), 1}, 
+            {(float) graphics->GetWidth(), 0, -1}
         )); 
         shader->SetTextureUnit("u_Texture", 0); 
         shader->Update(); 

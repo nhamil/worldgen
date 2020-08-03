@@ -13,12 +13,19 @@ namespace Fjord
         Graphics(); 
         ~Graphics(); 
 
+        void BeginFrame(); 
+        void EndFrame(); 
+
         void ClearTextures(); 
         void SetTexture(unsigned index, Texture2D* texture); 
         void SetShader(Shader* shader); 
         void SetGeometry(Geometry* geom); 
 
         void SetDepthTest(bool enabled); 
+
+        int GetWidth(); 
+        int GetHeight(); 
+        float GetAspectRatio(); 
 
         void ResetViewport(); 
         void SetViewport(int x, int y, int w, int h); 

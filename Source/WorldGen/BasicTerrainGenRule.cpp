@@ -110,6 +110,7 @@ void BasicTerrainGenRule::Apply(World& world)
 {
     FJ_DEBUG("Generating terrain..."); 
 
+    // TODO not thread-safe 
     int land = 0; 
     int water = 0; 
     
@@ -178,5 +179,5 @@ void BasicTerrainGenRule::Apply(World& world)
         }
     });
 
-    FJ_LOG(Debug, "Percent Water: %f%%", (float) water / (water + land) * 100); 
+    // FJ_LOG(Debug, "Percent Water: %f%%", (float) water / (water + land) * 100); 
 }

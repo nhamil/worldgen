@@ -2,6 +2,7 @@
 #include <Fjord/Core/Input.h> 
 #include <Fjord/Core/Object.h> 
 #include <Fjord/Core/UI.h> 
+#include <Fjord/Core/Window.h> 
 #include <Fjord/Math/MathUtil.h> 
 #include <Fjord/Math/Quaternion.h> 
 #include <Fjord/Graphics/Font.h> 
@@ -212,7 +213,22 @@ public:
         UI::SameLine(); 
         if (UI::Button("Reset Zoom")) Zoom = 1.0; 
 
+        WindowMode mode = GetWindow()->GetMode(); 
+
+        UI::Separator(); 
+        bool vsync = GetWindow()->IsVSyncEnabled(); 
+        UI::Checkbox("VSync Enabled", &vsync); 
+        if (UI::Button("Windowed")) mode = WindowMode::Windowed; 
+        UI::SameLine(); 
+        if (UI::Button("Fullscreen")) mode = WindowMode::Fullscreen; 
+        if (UI::Button("Borderless")) mode = WindowMode::Borderless; 
+        UI::SameLine(); 
+        if (UI::Button("Quit")) Fjord::Stop(); 
+
         UI::EndWindow(); 
+
+        GetWindow()->SetVSync(vsync); 
+        GetWindow()->SetMode(mode); 
     }
 
     virtual void Update(float dt) override 
@@ -298,7 +314,7 @@ public:
         graphics->SetPointSize(1); 
         graphics->SetLineWidth(1); 
 
-        Matrix4 tfm = Matrix4::Perspective(15.0 * Zoom * FJ_TO_RAD, 1.333, 0.1, 1000.0); 
+        Matrix4 tfm = Matrix4::Perspective(15.0 * Zoom * FJ_TO_RAD, graphics->GetAspectRatio(), 0.1, 1000.0); 
         tfm *= Matrix4::LookAt(CamPos, Vector3::Zero); 
         tfm *= Matrix4::RotationY(90 * FJ_TO_RAD); 
         // tfm *= Matrix4::RotationY(GetTimeSeconds()); 
@@ -352,8 +368,8 @@ public:
         sb->Begin(); 
         String info = ""; 
         info += "FPS: " + ToString((int) GetFPS()); 
-        info += "\n"; 
-        info += "UPS: " + ToString((int) GetUPS()); 
+        // info += "\n"; 
+        // info += "UPS: " + ToString((int) GetUPS()); 
         sb->DrawString(Color::White, 16, info.c_str(), 10, 20); 
         // sb->Draw(TestTexture, 100, 200, 100, 100); 
         sb->End(); 
@@ -366,7 +382,7 @@ public:
         WorldGenerator gen; 
         gen.AddRule(new SubdivideCellGenRule(WorldSize)); 
         if (WorldSize > 1) gen.AddRule(new CellDistortRule()); 
-        gen.AddRule(new CellRelaxRule(200)); 
+        gen.AddRule(new CellRelaxRule(50)); 
         gen.AddRule(new BasicTerrainGenRule()); 
         World = gen.Generate();
 
@@ -567,11 +583,11 @@ public:
     Ref<Mesh> CubeMesh; 
     bool DrawGrid = true; 
     bool DrawConnections = false; 
-    bool DrawOutlines = true; 
+    bool DrawOutlines = false; 
     bool DrawCells = true; 
     bool DrawStars = true; 
     bool DrawShaded = true; 
-    bool CameraLight = false; 
+    bool CameraLight = true; 
     Vector3 LightDirection = Vector3::Right; 
     // world gen 
     Ref<MeshData> PointMeshData, ConnMeshData, EdgeMeshData, CellMeshData, StarMeshData; 

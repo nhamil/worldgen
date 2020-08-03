@@ -10,6 +10,13 @@ namespace Fjord
 
     class WindowEventList; 
 
+    enum class WindowMode 
+    {
+        Windowed, 
+        Fullscreen, 
+        Borderless 
+    };
+
     class Window 
     {
     public: 
@@ -19,8 +26,15 @@ namespace Fjord
         void SwapBuffers(); 
         void Poll(); 
 
-        int GetWidth() const { return Width_; } 
-        int GetHeight() const { return Height_; } 
+        int GetWidth() const; 
+        int GetHeight() const; 
+
+        void SetVSync(bool enabled); 
+        bool IsVSyncEnabled() const; 
+
+        void SetMode(WindowMode mode); 
+
+        WindowMode GetMode() const; 
 
         Input* GetInput() 
         {
@@ -28,8 +42,10 @@ namespace Fjord
         }
 
     private: 
-        int Width_; 
-        int Height_; 
+        bool VSync_; 
+        WindowMode Mode_; 
+        int X_, Y_; 
+        int Width_, Height_; 
         Input Input_; 
         SDL_Window* Window_; 
         SDL_GLContext GLContext_; 

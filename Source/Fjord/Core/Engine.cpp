@@ -40,6 +40,8 @@ namespace Fjord
     static double frames = time; 
     static double skipFrames = 1.0 / 60.0; 
 
+    static bool vSyncLast; 
+
     void DoGameLoop() 
     {
         int loop = 0; 
@@ -60,13 +62,18 @@ namespace Fjord
             UI::FinishFrame(); 
         }
 
-        // if (frames < GetTimeSeconds()) 
+        if (vSyncLast != g_Window->IsVSyncEnabled()) 
+        {
+            vSyncLast = g_Window->IsVSyncEnabled(); 
+            frames = GetTimeSeconds(); 
+        }
+
+        // if (!g_Window->IsVSyncEnabled() || frames < GetTimeSeconds()) 
         {
             frames += skipFrames; 
             fps++; 
 
-            g_Graphics->ResetViewport(); 
-            g_Graphics->ResetClip(); 
+            g_Graphics->BeginFrame(); 
 
             g_App->Render(); 
             g_Graphics->Clear(false, true); 
@@ -74,8 +81,7 @@ namespace Fjord
             // g_GUI->HandleRender(guiRenderer); 
             // guiRenderer.Flush(); 
 
-            g_Graphics->ResetViewport(); 
-            g_Graphics->ResetClip(); 
+            g_Graphics->EndFrame(); 
             
             g_Window->SwapBuffers(); 
         }
@@ -106,12 +112,14 @@ namespace Fjord
 
         g_App = app; 
 
-        g_Window = new Window("WorldGen", 900*4/3, 900); 
+        g_Window = new Window("WorldGen", 800, 600); 
         g_Input = g_Window->GetInput(); 
         g_Graphics = new Graphics(); 
         g_App->Init(); 
 
         time = GetTimeSeconds(); 
+
+        vSyncLast = g_Window->IsVSyncEnabled(); 
 
         // GUIRenderer guiRenderer; 
 
