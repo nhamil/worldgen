@@ -10,50 +10,25 @@ namespace Fjord
     class KDTree3 
     {
     public: 
-        KDTree3() {}
-        KDTree3(const KDTree3<DataType>& other) 
-        {
-            Size_ = other.Size_; 
-            RootNode_ = other.RootNode_; 
-            if (RootNode_) RootNode_ = RootNode_->Copy(); 
-        } 
-        KDTree3<DataType>& operator=(const KDTree3<DataType>& other) 
-        {
-            if (&other == this) return *this; 
-
-            Clear(); 
-            Size_ = other.Size_; 
-            RootNode_ = other.RootNode_; 
-            if (RootNode_) RootNode_ = RootNode_->Copy(); 
-            return *this; 
-        } 
-
-        ~KDTree3() 
-        {
-            Clear(); 
-        } 
+        KDTree3() = default; 
+        ~KDTree3() = default; 
 
         unsigned Size() const 
         {
-            return Size_; 
+            return Nodes_.size(); 
         }
 
         void Clear() 
         {
-            Size_ = 0; 
-            if (RootNode_) 
-            {
-                delete RootNode_; 
-                RootNode_ = nullptr; 
-            }
+            Nodes_.clear(); 
         }
 
         void Insert(const Vector3& pos, const DataType& data) 
         {
-            Size_++; 
-            if (RootNode_) 
+            if (Size() > 0) 
             {
-                Node* cur = RootNode_; 
+                Index curIndex = 0; 
+                Node* cur = GetNode(0); 
 
                 // will always find a child node 
                 // or place new data and return 
@@ -61,21 +36,23 @@ namespace Fjord
                 {
                     unsigned axis = cur->Axis; 
                     bool left = cur->Position[axis] < pos[axis]; 
-                    Node* child = left ? cur->Left : cur->Right; 
-                    if (child) 
+                    Index childIndex = left ? cur->Left : cur->Right; 
+                    if (childIndex != -1) 
                     {
-                        cur = child; 
+                        curIndex = childIndex; 
+                        cur = GetNode(childIndex); 
                     }
                     else 
                     {
-                        child = new Node(pos, data, (axis + 1) % 3); 
+                        childIndex = NewNode(pos, data, (axis + 1) % 3); 
+                        cur = GetNode(curIndex); 
                         if (left) 
                         {
-                            cur->Left = child; 
+                            cur->Left = childIndex; 
                         }
                         else 
                         {
-                            cur->Right = child; 
+                            cur->Right = childIndex; 
                         }
                         return; 
                     }
@@ -83,20 +60,21 @@ namespace Fjord
             }
             else 
             {
-                RootNode_ = new Node(pos, data, 0); 
+                // create root node 
+                NewNode(pos, data, 0);
             }
         }
 
-        const DataType& Search(const Vector3& pos) const 
+        const DataType& Search(const Vector3& pos) const
         {
-            FJ_EASSERT(RootNode_); 
+            FJ_EASSERT(Size() > 0); 
 
             Vector<NodeDir> stack; 
 
-            Node* best = nullptr; 
+            const Node* best = nullptr; 
             float bestDist2 = INFINITY; 
 
-            SearchInternal(pos, RootNode_, stack, best, bestDist2); 
+            SearchInternal(pos, GetNode(0), stack, best, bestDist2); 
             while (stack.size() > 0) 
             {
                 NodeDir nd = stack.back(); 
@@ -110,7 +88,7 @@ namespace Fjord
                 {
                     // check other side of tree 
                     // nd.Left was reversed in SearchInternal 
-                    Node* search = nd.Left ? nd.Node->Left : nd.Node->Right; 
+                    const Node* search = GetNode(nd.Left ? nd.Node->Left : nd.Node->Right); 
                     SearchInternal(pos, search, stack, best, bestDist2); 
                 }
             }
@@ -119,43 +97,56 @@ namespace Fjord
         } 
 
     private: 
+        using Index = int32; 
+
         struct Node 
         {
+            Index Left = -1; 
+            Index Right = -1; 
             Vector3 Position; 
             DataType Data; 
-            Node* Left = nullptr; 
-            Node* Right = nullptr; 
             unsigned Axis; 
 
             Node(const Vector3& pos, const DataType& data, unsigned axis) 
                 : Position(pos) 
                 , Data(data)
-                , Left(nullptr) 
-                , Right(nullptr) 
-                , Axis(axis) {} 
+                , Axis(axis) {}
 
-            ~Node() 
-            {
-                if (Left) delete Left; 
-                if (Right) delete Right; 
-            }
+            Node() = default; 
 
-            Node* Copy() 
-            {
-                Node* n = new Node(Position, Data, Axis); 
-                n->Left = Left ? Left->Copy() : nullptr; 
-                n->Right = Right ? Right->Copy() : nullptr; 
-                return n; 
-            }
+            ~Node() {}
         };
+
+        Index NewNode(const Vector3& pos, const DataType& data, unsigned axis) 
+        {
+            Nodes_.push_back(Node(pos, data, axis)); 
+            return (Index) Nodes_.size() - 1;  
+        }
 
         struct NodeDir 
         {
-            struct Node* Node; 
-            bool Left; 
+            const struct Node* Node = nullptr; 
+            bool Left = false; 
+
+            NodeDir(const struct Node* node, bool left) 
+                : Node(node) 
+                , Left(left) {} 
         };
 
-        void SearchInternal(const Vector3& pos, Node* node, Vector<NodeDir>& stack, Node*& best, float& bestDist2) const 
+        /** 
+         * Must re-call every time new node is created 
+         */ 
+        Node* GetNode(Index in) 
+        {
+            return in == -1 ? nullptr : &Nodes_[0] + in; 
+        }
+
+        const Node* GetNode(Index in) const 
+        {
+            return in == -1 ? nullptr : &Nodes_[0] + in; 
+        }
+
+        void SearchInternal(const Vector3& pos, const Node* node, Vector<NodeDir>& stack, const Node*& best, float& bestDist2) const 
         {
             while (node) 
             {
@@ -169,13 +160,12 @@ namespace Fjord
                     best = node; 
                 }
 
-                stack.push_back({node, !left}); 
-                node = left ? node->Left : node->Right; 
+                stack.push_back(NodeDir(node, !left)); 
+                node = GetNode(left ? node->Left : node->Right); 
             }
         }
 
-        Node* RootNode_ = nullptr; 
-        unsigned Size_ = 0; 
+        Vector<Node> Nodes_; 
     }; 
 
 }
