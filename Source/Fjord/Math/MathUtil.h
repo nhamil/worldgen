@@ -17,46 +17,63 @@
 
 #define FJ_SQRT_2 (1.41421356237309504880)
 
-template <class T> 
-inline T Min(const T& a, const T& b) 
+namespace Fjord 
 {
-    return a < b ? a : b; 
-}
 
-template <class T> 
-inline T Max(const T& a, const T& b) 
-{
-    return a < b ? b : a; 
-}
+    template <class T> 
+    inline T Min(const T& a, const T& b) 
+    {
+        return a < b ? a : b; 
+    }
 
-template <class T, class S> 
-inline T Clamp(const T& x, const S& min, const S& max) 
-{
-    return x < min ? min : (x < max ? x : max); 
-}
+    template <class T> 
+    inline T Max(const T& a, const T& b) 
+    {
+        return a < b ? b : a; 
+    }
 
-template <class T, class S> 
-inline T Lerp(const T& x, const T& y, const S& a) 
-{
-    return x * (1 - a) + y * a; 
-}
+    template <class T, class S> 
+    inline T Clamp(const T& x, const S& min, const S& max) 
+    {
+        return x < min ? min : (x < max ? x : max); 
+    }
 
-template <class T, class S> 
-inline T SmoothLerp(const T& x, const T& y, const S& a) 
-{
-    return Lerp(x, y, a*a*(3-2*a));  
-}
+    template <class T, class S> 
+    inline T Lerp(const T& x, const T& y, const S& a) 
+    {
+        return x * (1 - a) + y * a; 
+    }
 
-template <class T> 
-inline T Round(const T& x) 
-{
-    return std::round(x); 
-}
+    template <class T, class S> 
+    inline T SmoothLerp(const T& x, const T& y, const S& a) 
+    {
+        return Lerp(x, y, a*a*(3-2*a));  
+    }
 
-template <class T> 
-inline T Map(const T& x, const T& minFrom, const T& maxFrom, const T& minTo, const T& maxTo) 
-{
-    T rangeFrom = maxFrom - minFrom; 
-    T rangeTo = maxTo - minTo; 
-    return (x - minFrom) * rangeTo / rangeFrom + minTo; 
+    template <class T> 
+    inline T Round(const T& x) 
+    {
+        return std::round(x); 
+    }
+
+    template <class T> 
+    inline T Floor(const T& x) 
+    {
+        return std::floor(x); 
+    }
+
+    template <class T> 
+    inline T Ceil(const T& x) 
+    {
+        return std::ceil(x); 
+    }
+
+    template <class T> 
+    inline T Map(const T& x, const T& minFrom, const T& maxFrom, const T& minTo, const T& maxTo) 
+    {
+        T rangeFrom = maxFrom - minFrom; 
+        T rangeTo = maxTo - minTo; 
+        return (x - minFrom) * rangeTo / rangeFrom + minTo; 
+    }
+
 }

@@ -14,6 +14,7 @@ set(SOURCES
     ${WORLDGEN_SOURCE_FOLDER}/World.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/WorldGenerator.cpp 
 
+    ${WORLDGEN_SOURCE_FOLDER}/ClimateSimulationRule.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/BasicTerrainGenRule.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/CellDistortRule.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/CellRelaxRule.cpp 
@@ -37,13 +38,6 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Graphics/SpriteBatch.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Texture2D.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/VertexBuffer.cpp 
-
-    # ${FJORD_SOURCE_FOLDER}/GUI/Button.cpp 
-    # ${FJORD_SOURCE_FOLDER}/GUI/Frame.cpp 
-    # ${FJORD_SOURCE_FOLDER}/GUI/Widget.cpp 
-    # ${FJORD_SOURCE_FOLDER}/GUI/GUIRenderer.cpp 
-    # ${FJORD_SOURCE_FOLDER}/GUI/Label.cpp 
-    # ${FJORD_SOURCE_FOLDER}/GUI/Layout.cpp 
 
     ${FJORD_SOURCE_FOLDER}/Math/Math.cpp 
 

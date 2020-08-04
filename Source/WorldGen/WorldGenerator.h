@@ -2,6 +2,8 @@
 
 #include "WorldGen/World.h" 
 
+struct FluidSim; 
+
 class WorldGenRule 
 {
 public: 
@@ -64,6 +66,33 @@ private:
     void SetPositions(World& world, Vector<Vector3>& positions); 
 
     int Iterations_; 
+};
+
+class ClimateSimulationRule : public WorldGenRule 
+{
+public: 
+    static const int SimWidth; 
+    static const int SimHeight; 
+    static const float InvSimWidth; 
+    static const float InvSimHeight; 
+
+    ClimateSimulationRule(int air, int ocean); 
+    virtual ~ClimateSimulationRule() = default; 
+
+    virtual void Apply(World& world) override; 
+
+private: 
+    void SetBounds(FluidSim& air, FluidSim& ocean, World& world); 
+    void AddPressureBands(FluidSim& air); 
+    void InitWind(FluidSim& air); 
+    void InitOcean(FluidSim& ocean, FluidSim& air); 
+    void UpdateCellsAir(FluidSim& air, World& world); 
+    void UpdateCellsOcean(FluidSim& air, World& world); 
+    float GradX(FluidSim& sim, float* a, int x, int y); 
+    float GradY(FluidSim& sim, float* a, int x, int y); 
+
+    int AirIterations_; 
+    int OceanIterations_; 
 };
 
 class WorldGenerator 

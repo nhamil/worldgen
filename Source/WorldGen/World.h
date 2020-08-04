@@ -51,11 +51,12 @@ struct Cell
     Quaternion OceanCurrent = Quaternion::Identity; 
     Quaternion WindCurrent = Quaternion::Identity; 
     Vector3 Position = Vector3::Zero; 
+    Vector<CellId> Connections; 
+    float AirPressure = 0; 
     float Height = 0; 
     float Heat = 0; 
     float Moisture = 0; 
     enum Terrain Terrain = Terrain::Invalid; 
-    Vector<CellId> Connections; 
 };
 
 class World 

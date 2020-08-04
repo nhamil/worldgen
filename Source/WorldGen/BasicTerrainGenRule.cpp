@@ -133,6 +133,9 @@ void BasicTerrainGenRule::Apply(World& world)
         // world.SetHeat(cell, heat); 
         // world.SetMoisture(cell, moisture); 
 
+        world.SetWindCurrent(cell, Quaternion::AxisAngle(position.Swizzle3("YZX"), 1 - height)); 
+        world.SetOceanCurrent(cell, Quaternion::AxisAngle(position.Swizzle3("ZXY"), 1 - moisture)); 
+
         if (height > 0.70) 
         {
             world.SetTerrain(cell, Terrain::Mountain); 
@@ -159,7 +162,7 @@ void BasicTerrainGenRule::Apply(World& world)
         {
             if (IsTerrainWater(t)) 
             {
-                // world.SetTerrain(cell, Terrain::Ice); 
+                world.SetTerrain(cell, Terrain::Ice); 
             }
             else 
             {

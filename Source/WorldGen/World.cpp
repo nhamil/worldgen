@@ -35,7 +35,7 @@ bool IsTerrainLand(Terrain t)
 GeoCoords GetGeoCoordsFromPosition(const Vector3& pos) 
 {
     return {
-        90.0 - std::acos(pos.Y / Length(pos)) * FJ_TO_RAD, 
+        90.0 - std::acos(pos.Y / Length(pos)) * FJ_TO_DEG, 
         std::atan2(pos.X, pos.Z) * FJ_TO_DEG 
     };
 }
@@ -239,4 +239,28 @@ void World::SetTerrain(CellId id, Terrain terrain)
 {
     FJ_ASSERT(id < GetCellCount()); 
     Cells_[id].Terrain = terrain; 
+}
+
+Quaternion World::GetWindCurrent(CellId id) const
+{
+    FJ_ASSERT(id < GetCellCount()); 
+    return Cells_[id].WindCurrent; 
+}
+
+void World::SetWindCurrent(CellId id, const Quaternion& rotation) 
+{
+    FJ_ASSERT(id < GetCellCount()); 
+    Cells_[id].WindCurrent = rotation; 
+}
+
+Quaternion World::GetOceanCurrent(CellId id) const
+{
+    FJ_ASSERT(id < GetCellCount()); 
+    return Cells_[id].OceanCurrent; 
+}
+
+void World::SetOceanCurrent(CellId id, const Quaternion& rotation) 
+{
+    FJ_ASSERT(id < GetCellCount()); 
+    Cells_[id].OceanCurrent = rotation; 
 }

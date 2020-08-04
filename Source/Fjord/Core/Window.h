@@ -29,6 +29,8 @@ namespace Fjord
         int GetWidth() const; 
         int GetHeight() const; 
 
+        void SetSize(int w, int h); 
+
         void SetVSync(bool enabled); 
         bool IsVSyncEnabled() const; 
 

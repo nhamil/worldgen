@@ -50,8 +50,8 @@ public:
     {
         Random r; 
 
-        // FJ_ELOG_LEVEL(Info); 
-        // FJ_LOG_LEVEL(Debug); 
+        FJ_ELOG_LEVEL(Info); 
+        FJ_LOG_LEVEL(Debug); 
 
         FJ_INFO("Application initializing..."); 
 
@@ -160,7 +160,7 @@ public:
     {
         (void) dt; 
 
-        UI::SetNextWindowPosition(20, 100); 
+        UI::SetNextWindowPosition(20, 50); 
         UI::SetNextWindowSize(300, 200-10); 
         UI::BeginWindow("WorldGen Util", UI::WindowFlagAutoResize); 
         
@@ -173,17 +173,14 @@ public:
         UI::SameLine(); 
         UI::Checkbox("Show Cells", &DrawCells); 
 
+        UI::Checkbox("Show Air Currents", &DrawAirCurrents); 
+        UI::Checkbox("Show Ocean Currents", &DrawOceanCurrents); 
+
         UI::Checkbox("Lighting Enabled", &DrawShaded); 
         UI::SameLine(); 
         UI::Checkbox("Camera Light", &CameraLight); 
 
         UI::Separator(); 
-        UI::SliderFloat("Light Dir X", &LightDirection[0], -1.0, 1.0, 0, "%0.3f"); //UI::SameLine(); 
-        UI::SliderFloat("Light Dir Y", &LightDirection[1], -1.0, 1.0, 0, "%0.3f"); //UI::SameLine(); 
-        UI::SliderFloat("Light Dir Z", &LightDirection[2], -1.0, 1.0, 0, "%0.3f"); 
-        LightDirection = Normalized(LightDirection); 
-        UI::Separator(); 
-
         float size = WorldSize; 
         UI::SliderFloat("Next World Size", &size, 0, 10, 10, "%0.0f"); 
         WorldSize = (int) size; 
@@ -279,7 +276,7 @@ public:
 
             Vector3 right = Normalized(Cross(Vector3::Up, LightDirection)); 
             Vector3 up = Normalized(Cross(right, LightDirection)); 
-            LightDirection = Normalized(Quaternion::AxisAngle(up, 45 * FJ_TO_RAD) * LightDirection); 
+            LightDirection = Normalized(Quaternion::AxisAngle(up, 35 * FJ_TO_RAD) * LightDirection); 
         }
 
         if (TicksToGenMeshes_ > 0) TicksToGenMeshes_--; 
@@ -314,6 +311,16 @@ public:
 
         graphics->ClearTextures(); 
 
+        LightShader->SetMatrix4("u_Model", tfm); 
+        LightShader->SetVector3("u_LightDirection", LightDirection); 
+        graphics->SetShader(LightShader); 
+
+        if (DrawCells && DrawShaded && CellMesh) 
+        {
+            graphics->SetGeometry(CellMesh->GetGeometry()); 
+            graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
+        }
+
         BasicShader->SetMatrix4("u_Model", tfm); 
         graphics->SetShader(BasicShader); 
 
@@ -347,14 +354,16 @@ public:
             graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
         }
 
-        LightShader->SetMatrix4("u_Model", tfm); 
-        LightShader->SetVector3("u_LightDirection", LightDirection); 
-        graphics->SetShader(LightShader); 
-
-        if (DrawCells && DrawShaded && CellMesh) 
+        if (DrawAirCurrents && AirMesh) 
         {
-            graphics->SetGeometry(CellMesh->GetGeometry()); 
-            graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
+            graphics->SetGeometry(AirMesh->GetGeometry()); 
+            graphics->Draw(Primitive::Lines, 0, AirMesh->GetVertexCount()); 
+        }
+
+        if (DrawOceanCurrents && OceanMesh) 
+        {
+            graphics->SetGeometry(OceanMesh->GetGeometry()); 
+            graphics->Draw(Primitive::Lines, 0, OceanMesh->GetVertexCount()); 
         }
 
         Batch->Begin(); 
@@ -363,7 +372,7 @@ public:
         // info += "\n"; 
         // info += "UPS: " + ToString((int) GetUPS()); 
         Batch->DrawString(Color::White, 16, info.c_str(), 10, 20); 
-        if (MapTexture) Batch->Draw(MapTexture, {1,1,1,0.5}, 500, 200, MapTexture->GetWidth(), MapTexture->GetHeight()); 
+        if (MapTexture) Batch->Draw(MapTexture, Color::White, 350, 50, MapTexture->GetWidth(), MapTexture->GetHeight()); 
         Batch->End(); 
     }
 
@@ -376,6 +385,7 @@ public:
         if (WorldSize > 1) gen.AddRule(new CellDistortRule()); 
         gen.AddRule(new CellRelaxRule(50)); 
         gen.AddRule(new BasicTerrainGenRule()); 
+        gen.AddRule(new ClimateSimulationRule(70, 200)); 
         class World w = gen.Generate();
 
         FJ_DEBUG("Calculating spatial geometry...");
@@ -525,6 +535,68 @@ public:
                 }
             }); 
         }
+
+        float scale = std::pow(10242.0f / World.GetCellCount(), 0.5f); 
+        FJ_DEBUG("Scale: %f", scale); 
+
+        FJ_DEBUG("Generating air current mesh..."); 
+        {
+            AirMeshData = new MeshData(); 
+            Vector<Vector3>& verts = AirMeshData->Vertices; 
+            Vector<Vector4>& colors = AirMeshData->Colors; 
+            verts.resize(World.GetCellCount()*2); 
+            colors.resize(World.GetCellCount()*2); 
+            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i) 
+            {
+                Vector3 pos = World.GetPosition(i); 
+                // TODO quaternion 
+                Quaternion q = World.GetWindCurrent(i); //Quaternion::AxisAngle(Vector3::Up + Vector3::Left, 0.5f); 
+
+                float angle = 2 * std::acos(q.W); 
+                Vector3 axis = {q.X, q.Y, q.Z}; 
+                axis = Normalized(axis); 
+
+                Vector3 posPrime = Quaternion::AxisAngle(axis, angle * 0.001) * pos; 
+                Vector3 move = Normalized(posPrime - pos) * angle; 
+
+                colors[i*2 + 0] = Color::Yellow; 
+                colors[i*2 + 1] = {1.0, 1.0, 1.0, 0.0}; 
+
+                verts[i*2 + 0] = pos * 1.001; 
+                verts[i*2 + 1] = pos * 1.001 + move * 0.1 * scale; 
+            }); 
+        }
+
+        FJ_DEBUG("Generating ocean current mesh..."); 
+        {
+            OceanMeshData = new MeshData(); 
+            Vector<Vector3>& verts = OceanMeshData->Vertices; 
+            Vector<Vector4>& colors = OceanMeshData->Colors; 
+            verts.resize(World.GetCellCount()*2); 
+            colors.resize(World.GetCellCount()*2); 
+            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i) 
+            {
+                if (IsTerrainWater(World.GetTerrain(i))) 
+                {
+                    Vector3 pos = World.GetPosition(i); 
+                    // TODO quaternion 
+                    Quaternion q = World.GetOceanCurrent(i); //Quaternion::AxisAngle(Vector3::Up + Vector3::Left, 0.5f); 
+
+                    float angle = 2 * std::acos(q.W); 
+                    Vector3 axis = {q.X, q.Y, q.Z}; 
+                    axis = Normalized(axis); 
+
+                    Vector3 posPrime = Quaternion::AxisAngle(axis, angle * 0.001) * pos; 
+                    Vector3 move = Normalized(posPrime - pos) * angle; 
+
+                    colors[i*2 + 0] = Color::White; 
+                    colors[i*2 + 1] = {1.0, 1.0, 1.0, 0.0}; 
+
+                    verts[i*2 + 0] = pos * 1.001; 
+                    verts[i*2 + 1] = pos * 1.001 + move * 0.1 * scale; 
+                }
+            }); 
+        }
     }
 
     void GenMeshes() 
@@ -551,9 +623,23 @@ public:
         CellMeshData->Apply(CellMesh); 
         CellMeshData = nullptr; 
 
+        if (AirMeshData) 
+        {
+            AirMesh = new Mesh(); 
+            AirMeshData->Apply(AirMesh); 
+            AirMeshData = nullptr; 
+        }
+
+        if (OceanMeshData) 
+        {
+            OceanMesh = new Mesh(); 
+            OceanMeshData->Apply(OceanMesh); 
+            OceanMeshData = nullptr; 
+        }
+
         GenTime = GetTimeSeconds() - GenTime; 
 
-        MapTexture = new Texture2D(1024, 512, TextureFormat::RGB8); 
+        MapTexture = new Texture2D(256, 128, TextureFormat::RGB8); 
         uint8* img = new uint8[3 * MapTexture->GetWidth() * MapTexture->GetHeight()]; 
         for (int y = 0; y < MapTexture->GetHeight(); y++) 
         {
@@ -611,10 +697,12 @@ public:
     bool DrawStars = true; 
     bool DrawShaded = true; 
     bool CameraLight = true; 
+    bool DrawAirCurrents = true; 
+    bool DrawOceanCurrents = false; 
     Vector3 LightDirection = Vector3::Right; 
     // world gen 
-    Ref<MeshData> PointMeshData, ConnMeshData, EdgeMeshData, CellMeshData, StarMeshData; 
-    Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, FluidMesh, FluidVelMesh; 
+    Ref<MeshData> PointMeshData, ConnMeshData, EdgeMeshData, CellMeshData, StarMeshData, AirMeshData, OceanMeshData; 
+    Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, AirMesh, OceanMesh; 
     class World World; 
     int WorldSize = 5; 
     Ref<Thread> GenThread; 
