@@ -52,7 +52,7 @@ public:
 
         // FJ_ELOG_LEVEL(Info); 
         // FJ_LOG_LEVEL(Debug); 
-        
+
         FJ_INFO("Application initializing..."); 
 
         CubeMesh = new Mesh(); 
@@ -109,9 +109,10 @@ public:
         CubeMesh->SetIndices(indexData); 
         CubeMesh->Update(); 
 
+        Batch = new SpriteBatch(); 
+
         BasicShader = Shader::Load("Basic");
         LightShader = Shader::Load("Shaded"); 
-        TestTexture = Texture2D::Load("TestImage"); 
 
         MyFont = new Font("Default"); 
 
@@ -356,15 +357,14 @@ public:
             graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
         }
 
-        Ref<SpriteBatch> sb = new SpriteBatch(); 
-        sb->Begin(); 
+        Batch->Begin(); 
         String info = ""; 
         info += "FPS: " + ToString((int) GetFPS()); 
         // info += "\n"; 
         // info += "UPS: " + ToString((int) GetUPS()); 
-        sb->DrawString(Color::White, 16, info.c_str(), 10, 20); 
-        // sb->Draw(TestTexture, 100, 200, 100, 100); 
-        sb->End(); 
+        Batch->DrawString(Color::White, 16, info.c_str(), 10, 20); 
+        if (MapTexture) Batch->Draw(MapTexture, {1,1,1,0.5}, 500, 200, MapTexture->GetWidth(), MapTexture->GetHeight()); 
+        Batch->End(); 
     }
 
     void GenWorld() 
@@ -553,6 +553,31 @@ public:
 
         GenTime = GetTimeSeconds() - GenTime; 
 
+        MapTexture = new Texture2D(1024, 512, TextureFormat::RGB8); 
+        uint8* img = new uint8[3 * MapTexture->GetWidth() * MapTexture->GetHeight()]; 
+        for (int y = 0; y < MapTexture->GetHeight(); y++) 
+        {
+            float lat = 90.0f - y * 180.0f * MapTexture->GetInvHeight(); 
+            for (int x = 0; x < MapTexture->GetWidth(); x++) 
+            {
+                float lon = -180.0f + x * 360.0f * MapTexture->GetInvWidth(); 
+                Vector3 pos = GetPositionFromGeoCoords({lat, lon}); 
+
+                int i = 3 * (x + y * MapTexture->GetWidth()); 
+
+                CellId cell = World.GetCellIdPyPosition(pos); 
+                Terrain terrain = World.GetTerrain(cell); 
+                Color col = GetTerrainColor(terrain); 
+
+                img[i + 0] = (int) Map<float>(col.R, 0, 1, 0, 255); 
+                img[i + 1] = (int) Map<float>(col.G, 0, 1, 0, 255); 
+                img[i + 2] = (int) Map<float>(col.B, 0, 1, 0, 255); 
+            }
+        }
+        MapTexture->SetData(img); 
+        MapTexture->Update(); 
+        delete[] img; 
+
         FJ_LOG(Debug, 
             "Done! Created world with %u cell and %u connections in %0.1f seconds (%dkb)", 
             World.GetCellCount(), 
@@ -576,8 +601,9 @@ public:
     Ref<IndexBuffer> IB; 
     Ref<VertexBuffer> VB; 
     Ref<Shader> BasicShader, LightShader; 
-    Ref<Texture2D> TestTexture; 
+    Ref<Texture2D> MapTexture; 
     Ref<Mesh> CubeMesh; 
+    Ref<SpriteBatch> Batch; 
     bool DrawGrid = true; 
     bool DrawConnections = false; 
     bool DrawOutlines = false; 

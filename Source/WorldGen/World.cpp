@@ -118,56 +118,13 @@ bool World::HasConnection(CellId a, CellId b) const
 
 CellId World::GetCellIdPyPosition(const Vector3& position)  
 {
-    // FJ_WARN("Getting cell by position without optimized structure!"); 
-    // Vector3 pos = Normalized(position); 
-    // // FJ_LOG(Debug, "target %0.3f %0.3f %0.3f", pos.X, pos.Y, pos.Z); 
-    // CellId best = 0; 
-    // float dist = FLT_MAX; 
-    // for (CellId i = 0; i < GetCellCount(); i++) 
-    // {
-    //     const Cell& c = Cells_[i]; 
-    //     float angle = AngleUnsafe(c.Position, pos); 
-    //     if (angle < dist) 
-    //     {
-    //         // Vector3 p = c.Position; 
-    //         // FJ_LOG(Debug, "new %0.3f %0.3f %0.3f", p.X, p.Y, p.Z); 
-    //         best = i; 
-    //         dist = angle; 
-    //     }
-    // }
-    // // pos = Cells_[best].Position; 
-    // // FJ_LOG(Debug, "--> best %0.3f %0.3f %0.3f", pos.X, pos.Y, pos.Z); 
-    // return best; 
-
     UpdateSpatialGeometry(); 
     return SearchTree_.Search(Normalized(position)); 
 }
 
 CellId World::GetCellIdPyPosition(const Vector3& position) const 
 {
-    // FJ_WARN("Getting cell by position without optimized structure!"); 
-    // Vector3 pos = Normalized(position); 
-    // // FJ_LOG(Debug, "target %0.3f %0.3f %0.3f", pos.X, pos.Y, pos.Z); 
-    // CellId best = 0; 
-    // float dist = FLT_MAX; 
-    // for (CellId i = 0; i < GetCellCount(); i++) 
-    // {
-    //     const Cell& c = Cells_[i]; 
-    //     float angle = AngleUnsafe(c.Position, pos); 
-    //     if (angle < dist) 
-    //     {
-    //         // Vector3 p = c.Position; 
-    //         // FJ_LOG(Debug, "new %0.3f %0.3f %0.3f", p.X, p.Y, p.Z); 
-    //         best = i; 
-    //         dist = angle; 
-    //     }
-    // }
-    // // pos = Cells_[best].Position; 
-    // // FJ_LOG(Debug, "--> best %0.3f %0.3f %0.3f", pos.X, pos.Y, pos.Z); 
-    // return best; 
-
     FJ_ASSERT(!UpdateTree_); 
-
     return SearchTree_.Search(Normalized(position)); 
 }
 

@@ -16,6 +16,7 @@ namespace Fjord
     class SpriteBatch : public RefCounted 
     {
     public: 
+        // TODO make this bigger (will likely affect UI performance) 
         static const unsigned MaxSpriteCount = 10; 
 
         static Font* GetDefaultFont() 

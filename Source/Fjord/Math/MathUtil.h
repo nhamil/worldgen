@@ -52,3 +52,11 @@ inline T Round(const T& x)
 {
     return std::round(x); 
 }
+
+template <class T> 
+inline T Map(const T& x, const T& minFrom, const T& maxFrom, const T& minTo, const T& maxTo) 
+{
+    T rangeFrom = maxFrom - minFrom; 
+    T rangeTo = maxTo - minTo; 
+    return (x - minFrom) * rangeTo / rangeFrom + minTo; 
+}
