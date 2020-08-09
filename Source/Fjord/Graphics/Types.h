@@ -94,7 +94,7 @@ namespace Fjord
     {
         Directional, 
         Point, 
-        Spot
+        // Spot
     };
 
     enum class BufferUsage 

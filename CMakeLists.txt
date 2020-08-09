@@ -31,15 +31,23 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Graphics/IndexBuffer.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Geometry.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Graphics.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/Light.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/Material.cpp
     ${FJORD_SOURCE_FOLDER}/Graphics/Mesh.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/OpenGL.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Parameter.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/Renderer.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/RenderSystems.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Shader.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/SpriteBatch.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Texture2D.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/VertexBuffer.cpp 
 
     ${FJORD_SOURCE_FOLDER}/Math/Math.cpp 
+
+    ${FJORD_SOURCE_FOLDER}/Scene/EntitySystem.cpp 
+    ${FJORD_SOURCE_FOLDER}/Scene/Group.cpp 
+    ${FJORD_SOURCE_FOLDER}/Scene/Scene.cpp 
 
     ${FJORD_SOURCE_FOLDER}/Util/FileUtil.cpp 
     ${FJORD_SOURCE_FOLDER}/Util/Memory.cpp 

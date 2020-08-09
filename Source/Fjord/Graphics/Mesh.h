@@ -32,6 +32,8 @@ namespace Fjord
     class Mesh : public RefCounted
     {
     public: 
+        static Mesh* CreateCube(); 
+
         Mesh(); 
         ~Mesh(); 
 
@@ -41,6 +43,8 @@ namespace Fjord
         Vector<Vector3> GetTangents() const; 
         Vector<Vector4> GetColors() const; 
         Vector<Vector2> GetTexCoords() const; 
+
+        Primitive GetPrimitive() const; 
 
         unsigned GetIndexCount() const; 
         unsigned GetVertexCount() const; 
@@ -57,6 +61,8 @@ namespace Fjord
         void SetTangents(const Vector<Vector3>& tangents); 
         void SetColors(const Vector<Vector4>& colors); 
         void SetTexCoords(const Vector<Vector2>& texCoords); 
+
+        void SetPrimitive(Primitive prim); 
 
         void Clear();   
         void ClearIndices(); 
@@ -85,6 +91,7 @@ namespace Fjord
     private: 
         VertexBuffer* GetOrMakeVertexBuffer(Attribute attrib, bool shouldExist); 
 
+        Primitive Primitive_ = Primitive::Triangles; 
         Ref<VertexBuffer> VertexBuffers_[(unsigned) Attribute::count]; 
         Ref<Geometry> Geometry_; 
         Ref<IndexBuffer> IndexBuffer_; 

@@ -5,8 +5,9 @@
 #include "Fjord/Core/UI.h" 
 #include "Fjord/Core/Window.h" 
 #include "Fjord/Graphics/Graphics.h" 
-// #include "Fjord/GUI/GUIEnvironment.h" 
-// #include "Fjord/GUI/GUIRenderer.h" 
+#include "Fjord/Graphics/Renderer.h" 
+#include "Fjord/Scene/Scene.h" 
+#include "Fjord/Scene/Transform.h" 
 #include "Fjord/Util/Time.h" 
 #include "Fjord/Util/Thread.h" 
 
@@ -23,7 +24,7 @@ namespace Fjord
     static Logger* g_Logger = nullptr; 
     static Logger* g_EngineLogger = nullptr; 
     static Application* g_App = nullptr; 
-    // static GUIEnvironment* g_GUI = nullptr; 
+    static Renderer* g_Renderer = nullptr; 
 
     static bool g_Running = false; 
 
@@ -74,13 +75,13 @@ namespace Fjord
             fps++; 
 
             g_Graphics->BeginFrame(); 
+            g_Renderer->BeginFrame(); 
 
             g_App->Render(); 
+            
+            g_Renderer->EndFrame(); 
             g_Graphics->Clear(false, true); 
             UI::Render(); 
-            // g_GUI->HandleRender(guiRenderer); 
-            // guiRenderer.Flush(); 
-
             g_Graphics->EndFrame(); 
             
             g_Window->SwapBuffers(); 
@@ -108,6 +109,8 @@ namespace Fjord
 
         g_Running = true; 
 
+        Scene::RegisterComponent<Transform>(); 
+
         // g_GUI = new GUIEnvironment(g_Window->GetWidth(), g_Window->GetHeight()); 
 
         g_App = app; 
@@ -115,6 +118,7 @@ namespace Fjord
         g_Window = new Window("WorldGen", 800, 600); 
         g_Input = g_Window->GetInput(); 
         g_Graphics = new Graphics(); 
+        g_Renderer = new Renderer(); 
         g_App->Init(); 
 
         time = GetTimeSeconds(); 
@@ -174,6 +178,11 @@ namespace Fjord
     Graphics* GetGraphics() 
     {
         return g_Graphics; 
+    }
+
+    Renderer* GetRenderer() 
+    {
+        return g_Renderer; 
     }
 
     Logger* GetLogger() 

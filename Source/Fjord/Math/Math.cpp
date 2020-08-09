@@ -41,6 +41,11 @@ namespace Fjord
         0, 0, 0, 1
     );
 
+    Matrix3::Matrix3(const Matrix4& m)
+        : M00(m.M00), M10(m.M10), M20(m.M20)
+        , M01(m.M01), M11(m.M11), M21(m.M21)
+        , M02(m.M02), M12(m.M12), M22(m.M22) {}
+
     /**
      * Inverse matrx4
      * modified from https://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix

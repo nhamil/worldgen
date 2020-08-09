@@ -274,7 +274,7 @@ namespace Fjord
         for (int i = 0; i < count; i++)
         {
             GLCALL(glGetActiveUniform(Handle_, i, 1024, &length, &size, &type, name));
-
+            // FJ_EFDEBUG("Found shader parameter: %s", name); 
             ParameterType paramType = GetParameterType(name, type); 
             Parameters_[name] = ShaderParameter(paramType, i, Parameter(paramType));
         }

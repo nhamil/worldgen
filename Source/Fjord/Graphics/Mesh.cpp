@@ -29,6 +29,94 @@ namespace Fjord
         return success; 
     }
 
+    Mesh* Mesh::CreateCube() 
+    {
+        Mesh* mesh = new Mesh(); 
+
+        static const float S = 0.5f; 
+
+        static Vector<Vector3> verts({
+            // front 
+            {-S,  S,  S}, 
+            {-S, -S,  S}, 
+            { S, -S,  S}, 
+            { S,  S,  S}, 
+            // back 
+            { S,  S, -S}, 
+            { S, -S, -S}, 
+            {-S, -S, -S}, 
+            {-S,  S, -S}, 
+            // left 
+            {-S,  S, -S}, 
+            {-S, -S, -S}, 
+            {-S, -S,  S}, 
+            {-S,  S,  S}, 
+            // right 
+            { S,  S,  S}, 
+            { S, -S,  S}, 
+            { S, -S, -S}, 
+            { S,  S, -S}, 
+            // top 
+            {-S,  S, -S}, 
+            {-S,  S,  S}, 
+            { S,  S,  S}, 
+            { S,  S, -S}, 
+            // bottom 
+            {-S, -S,  S}, 
+            {-S, -S, -S}, 
+            { S, -S, -S}, 
+            { S, -S,  S} 
+        }); 
+        static Vector<Vector4> colors({
+            // front 
+            Color::Yellow, 
+            Color::Yellow, 
+            Color::Yellow, 
+            Color::Yellow, 
+            // back 
+            Color::Cyan, 
+            Color::Cyan, 
+            Color::Cyan, 
+            Color::Cyan, 
+            // left 
+            Color::Red, 
+            Color::Red, 
+            Color::Red, 
+            Color::Red, 
+            // right 
+            Color::Green, 
+            Color::Green, 
+            Color::Green, 
+            Color::Green, 
+            // top 
+            Color::Blue, 
+            Color::Blue, 
+            Color::Blue, 
+            Color::Blue, 
+            // bottom 
+            Color::Fuchsia, 
+            Color::Fuchsia, 
+            Color::Fuchsia, 
+            Color::Fuchsia, 
+        });
+        static Vector<uint32> inds({
+            0, 1, 2, 0, 2, 3, 
+            4, 5, 6, 4, 6, 7, 
+            8, 9, 10, 8, 10, 11, 
+            12, 13, 14, 12, 14, 15, 
+            16, 17, 18, 16, 18, 19, 
+            20, 21, 22, 20, 22, 23
+        }); 
+
+        mesh->SetVertices(verts); 
+        mesh->SetColors(colors); 
+        mesh->SetIndices(inds); 
+        mesh->CalculateNormals(); 
+        mesh->Update(); 
+
+        return mesh; 
+    }
+
     Mesh::Mesh() 
     {
         Geometry_ = new Geometry(); 
@@ -40,6 +128,16 @@ namespace Fjord
     }
 
     Mesh::~Mesh() {}
+
+    Primitive Mesh::GetPrimitive() const 
+    {
+        return Primitive_; 
+    }
+
+    void Mesh::SetPrimitive(Primitive prim) 
+    {
+        Primitive_ = prim; 
+    }
 
     unsigned Mesh::GetIndexCount() const 
     {
@@ -160,6 +258,11 @@ namespace Fjord
             return Vector<Vector2>(); 
         }
     } 
+
+    bool Mesh::HasIndices() const 
+    {
+        return (bool) IndexBuffer_; 
+    }
 
     bool Mesh::HasVertices() const 
     {
@@ -495,5 +598,127 @@ namespace Fjord
         Geometry_->SetVertexBuffers(buffers); 
         Geometry_->Update(); 
     } 
+
+    void Mesh::CalculateNormals() 
+    {
+        FJ_EASSERT(HasVertices()); 
+        FJ_EASSERT(HasIndices()); 
+        FJ_EASSERT(GetPrimitive() == Primitive::Triangles); 
+
+        unsigned vertCount = GetVertexCount(); 
+        unsigned indCount = GetIndexCount(); 
+
+        Vector<Vector3> norm(vertCount); 
+        Vector<uint32> inds = GetIndices(); 
+        Vector<Vector3> verts = GetVertices(); 
+        Vector3 a, b, c; 
+
+        for (unsigned i = 0; i < indCount; i += 3) 
+        {
+            unsigned i1 = inds[i + 0]; 
+            unsigned i2 = inds[i + 1]; 
+            unsigned i3 = inds[i + 2]; 
+
+            a = verts[i1]; 
+            b = verts[i2]; 
+            c = verts[i3]; 
+
+            b = Normalized(b - a); 
+            c = Normalized(c - a); 
+
+            b = Normalized(Cross(b, c)); 
+
+            norm[i1] += b; 
+            norm[i2] += b; 
+            norm[i3] += b; 
+        }
+
+        for (unsigned i = 0; i < vertCount; i++) 
+        {
+            norm[i] = Normalized(norm[i]); 
+        }
+
+        SetNormals(norm); 
+    }
+
+    void Mesh::CalculateTangents() 
+    {
+        FJ_EASSERT(HasVertices()); 
+        FJ_EASSERT(HasNormals()); 
+        FJ_EASSERT(HasTexCoords()); 
+        FJ_EASSERT(HasIndices()); 
+        FJ_EASSERT(GetPrimitive() == Primitive::Triangles); 
+
+        unsigned vertCount = GetVertexCount(); 
+        unsigned indCount = GetIndexCount(); 
+
+        Vector<uint32> inds = GetIndices(); 
+        Vector<Vector3> verts = GetVertices(); 
+        Vector<Vector3> norm = GetNormals(); 
+        Vector<Vector2> texCoords = GetTexCoords(); 
+
+        Vector<Vector3> tan1(vertCount); 
+        // Vector<Vector3> tan2(vertCount); // TODO why is this here 
+
+        Vector3 v1, v2, v3; 
+        Vector2 w1, w2, w3; 
+
+        Vector3 sDir;//, tDir; 
+
+        for (unsigned i = 0; i < indCount; i += 3) 
+        {
+            unsigned i1 = inds[i + 0]; 
+            unsigned i2 = inds[i + 1]; 
+            unsigned i3 = inds[i + 2]; 
+
+            v1 = verts[i1]; 
+            v2 = verts[i2]; 
+            v3 = verts[i3]; 
+
+            w1 = texCoords[i1]; 
+            w2 = texCoords[i2]; 
+            w3 = texCoords[i3]; 
+
+            float x1 = v2.X - v1.X; 
+            float x2 = v3.X - v1.X; 
+            float y1 = v2.Y - v1.Y; 
+            float y2 = v3.Y - v1.Y; 
+            float z1 = v2.Z - v1.Z; 
+            float z2 = v3.Z - v1.Z; 
+
+            float s1 = w2.X - w1.X; 
+            float s2 = w3.X - w1.X; 
+            float t1 = w2.Y - w1.Y; 
+            float t2 = w3.Y - w1.Y; 
+
+            float r = 1.0f / (s1 * t2 - s2 * t1); 
+
+            sDir = {
+                r * (t2 * x1 - t1 * x2), 
+                r * (t2 * y1 - t1 * y2), 
+                r * (t2 * z1 - t1 * z2) 
+            };
+            // tDir = {
+            //     r * (s1 * x2 - s2 * x1), 
+            //     r * (s1 * y2 - s2 * y1), 
+            //     r * (s1 * z2 - s2 * z1) 
+            // };
+
+            tan1[i1] += sDir; 
+            tan1[i2] += sDir; 
+            tan1[i3] += sDir; 
+            // tan2[i1] += tDir; 
+            // tan2[i2] += tDir; 
+            // tan2[i3] += tDir; 
+        }
+
+        for (unsigned i = 0; i < vertCount; i++) 
+        {
+            tan1[i] = Normalized(tan1[i]); 
+            // tan2[i] = Normalized(tan2[i]); 
+        }
+
+        SetTangents(tan1); 
+    }
 
 }

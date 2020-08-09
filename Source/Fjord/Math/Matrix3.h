@@ -9,6 +9,8 @@
 namespace Fjord 
 {
 
+    struct Matrix4; 
+
     /**
      * 3x3 matrix. 
      */ 
@@ -56,6 +58,8 @@ namespace Fjord
             : M00(M00), M10(M10), M20(M20)
             , M01(M01), M11(M11), M21(M21)
             , M02(M02), M12(M12), M22(M22) {}
+
+        explicit Matrix3(const Matrix4& m); 
 
         Matrix3(const Vector3& m0, const Vector3& m1, const Vector3& m2)
             : M00(m0.X), M10(m0.Y), M20(m0.Z)
@@ -165,6 +169,17 @@ namespace Fjord
         Matrix3 operator-() const { return Matrix3(*this) *= -1; }
 
     }; 
+
+    inline Vector3 operator*(const Matrix3& a, const Vector3& b) 
+    {
+        Vector3 out;
+
+        out.X = a.M00 * b.X + a.M01 * b.Y + a.M02 * b.Z; 
+        out.Y = a.M10 * b.X + a.M11 * b.Y + a.M12 * b.Z; 
+        out.Z = a.M20 * b.X + a.M21 * b.Y + a.M22 * b.Z; 
+
+        return out;
+    }
 
     inline Matrix3 Transpose(const Matrix3& r) 
     {

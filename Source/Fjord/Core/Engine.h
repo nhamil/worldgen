@@ -8,9 +8,9 @@ namespace Fjord
 
     class Application; 
     class Graphics; 
-    // class GUIEnvironment; 
     class Input; 
     class Logger; 
+    class Renderer; 
     class Window; 
 
     int Start(Application* app); 
@@ -31,6 +31,6 @@ namespace Fjord
 
     Graphics* GetGraphics(); 
 
-    // GUIEnvironment* GetGUI(); 
+    Renderer* GetRenderer(); 
 
 }

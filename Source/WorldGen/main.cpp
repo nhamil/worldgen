@@ -5,15 +5,27 @@
 #include <Fjord/Core/Window.h> 
 #include <Fjord/Math/MathUtil.h> 
 #include <Fjord/Math/Quaternion.h> 
+#include <Fjord/Graphics/Camera.h> 
 #include <Fjord/Graphics/Font.h> 
 #include <Fjord/Graphics/Geometry.h> 
 #include <Fjord/Graphics/Graphics.h> 
 #include <Fjord/Graphics/IndexBuffer.h> 
+#include <Fjord/Graphics/Light.h> 
+#include <Fjord/Graphics/Material.h> 
 #include <Fjord/Graphics/Mesh.h> 
+#include <Fjord/Graphics/MeshContainer.h> 
+#include <Fjord/Graphics/Renderer.h> 
+#include <Fjord/Graphics/RenderSystems.h> 
 #include <Fjord/Graphics/Shader.h> 
 #include <Fjord/Graphics/SpriteBatch.h> 
 #include <Fjord/Graphics/Texture2D.h> 
 #include <Fjord/Graphics/VertexBuffer.h> 
+#include <Fjord/Scene/Component.h> 
+#include <Fjord/Scene/EntityFilter.h> 
+#include <Fjord/Scene/EntitySystem.h> 
+#include <Fjord/Scene/Group.h> 
+#include <Fjord/Scene/Scene.h> 
+#include <Fjord/Scene/Transform.h> 
 #include <Fjord/Util/ClassId.h> 
 #include <Fjord/Util/FileUtil.h> 
 #include <Fjord/Util/Random.h> 
@@ -28,480 +40,122 @@
 using namespace Fjord; 
 using namespace std; 
 
-class Main; 
-
-class TestThread : public Thread 
-{
-public: 
-    TestThread(Main* main) : Main_(main) {} 
-
-    virtual void Run() override; 
-
-private: 
-    Main* Main_; 
-}; 
-
 class Main : public Application 
 {
 public: 
-    // TestThread thread; 
+    virtual void Init() override; 
+    virtual void UpdateGUI(float dt) override; 
+    virtual void Update(float dt) override; 
+    virtual void Render() override; 
 
-    virtual void Init() override
+    Ref<Fjord::Scene> Scene; 
+}; 
+
+class FPSCamera : public Component 
+{
+public: 
+    float RotX = 0.0f; // up-down 
+    float RotY = 0.0f; // left-right 
+}; 
+
+class RotateTag : public Component 
+{
+public: 
+    float Amount = 1.0f;  
+}; 
+
+class Planet : public Component 
+{
+public: 
+    class World World; 
+    Ref<Material> MainMaterial; 
+    Ref<Mesh> CellMesh, OutlineMesh; 
+};
+
+class WorldGenSystem : public EntitySystem 
+{
+public: 
+    WorldGenSystem() 
     {
-        Random r; 
-
-        FJ_ELOG_LEVEL(Info); 
-        FJ_LOG_LEVEL(Debug); 
-
-        FJ_INFO("Application initializing..."); 
-
-        CubeMesh = new Mesh(); 
-
-        Vector<uint32> indexData({
-            0, 1, 3, 0, 3, 2, 
-            5, 4, 6, 5, 6, 7,  
-
-            3, 7, 6, 3, 6, 2, 
-            0, 4, 5, 0, 5, 1,  
-            1, 5, 7, 1, 7, 3, 
-            4, 0, 2, 4, 2, 6 
-        });
-
-        Vector<Vector3> vertexData({
-            {-1, -1, -1},
-            {-1, -1,  1},
-            {-1,  1, -1}, 
-            {-1,  1,  1},
-
-            { 1, -1, -1}, 
-            { 1, -1,  1},
-            { 1,  1, -1},
-            { 1,  1,  1}, 
-        });
-
-        Vector<Vector2> texCoordData({
-            {0, 1}, 
-            {1, 1}, 
-            {0, 0}, 
-            {1, 0}, 
-
-            {1, 1}, 
-            {0, 1}, 
-            {1, 0}, 
-            {0, 0}
-        });
-
-        Vector<Vector4> colorData({
-            {0, 0, 0, 1}, 
-            {0, 0, 1, 1}, 
-            {0, 1, 0, 1}, 
-            {0, 1, 1, 1}, 
-
-            {1, 0, 0, 1}, 
-            {1, 0, 1, 1}, 
-            {1, 1, 0, 1}, 
-            {1, 1, 1, 1}, 
-        });
-
-        CubeMesh->SetVertices(vertexData); 
-        CubeMesh->SetTexCoords(texCoordData); 
-        CubeMesh->SetColors(colorData); 
-        CubeMesh->SetIndices(indexData); 
-        CubeMesh->Update(); 
-
-        Batch = new SpriteBatch(); 
-
-        BasicShader = Shader::Load("Basic");
-        LightShader = Shader::Load("Shaded"); 
-
-        MyFont = new Font("Default"); 
-
-        GenThread = new TestThread(this); 
-        GenThread->Start(); 
-
-        StarMeshData = new MeshData(); 
-        Vector<Vector3>& verts = StarMeshData->Vertices; 
-        Vector<Vector4>& colors = StarMeshData->Colors; 
-        verts.resize(100000); 
-        colors.resize(100000); 
-        // for (int i = 0; i < 100000; i++) 
-        float theta, phi; 
-        for (int i = 0; i < 100000; i++) 
-        {
-            // FJ_DEBUG("%f", r.NextFloat()); 
-            theta = 2 * FJ_PI * r.NextFloat(); 
-            phi = std::acos(2 * r.NextFloat() - 1.0f); 
-            verts[i] = Normalized(Vector3(
-                std::cos(theta) * std::sin(phi), 
-                std::sin(theta) * std::sin(phi), 
-                std::cos(phi) 
-            )) * 900; 
-            // verts[i] = Normalized(Quaternion::AxisAngle(Normalized(Vector3(
-            //     r.NextFloat(), 
-            //     r.NextFloat(), 
-            //     r.NextFloat()
-            // )), r.NextFloat() * FJ_2_PI) * Vector3::Right) * 900; 
-            colors[i] = {1, 1, 1, 1}; 
-        } 
-        StarMesh = new Mesh(); 
-        StarMeshData->Apply(StarMesh); 
-        StarMeshData = nullptr; 
-
-        FJ_INFO("Done!"); 
+        IncludeComponent<Planet>(); 
+        IncludeComponent<Transform>(); 
     }
 
-    virtual void Stop() override
+    virtual void UpdateGUI() override 
     {
-        // FJ_DEBUG("Thread Join: %d", thread.Join()); 
-        FJ_INFO("Finished successfully"); 
-    }
+        auto* scene = GetScene(); 
 
-    virtual void UpdateGUI(float dt) override
-    {
-        (void) dt; 
-
-        UI::SetNextWindowPosition(20, 50); 
-        UI::SetNextWindowSize(300, 200-10); 
-        UI::BeginWindow("WorldGen Util", UI::WindowFlagAutoResize); 
-        
-        // settings 
-        UI::Checkbox("Show Stars", &DrawStars); 
-        UI::SameLine(); 
-        UI::Checkbox("Show Outlines", &DrawOutlines); 
-
-        UI::Checkbox("Show Links", &DrawConnections); 
-        UI::SameLine(); 
-        UI::Checkbox("Show Cells", &DrawCells); 
-
-        UI::Checkbox("Show Air Currents", &DrawAirCurrents); 
-        UI::Checkbox("Show Ocean Currents", &DrawOceanCurrents); 
-
-        UI::Checkbox("Lighting Enabled", &DrawShaded); 
-        UI::SameLine(); 
-        UI::Checkbox("Camera Light", &CameraLight); 
-
-        UI::Separator(); 
-        float size = WorldSize; 
-        UI::SliderFloat("Next World Size", &size, 0, 10, 10, "%0.0f"); 
-        WorldSize = (int) size; 
-
-        UI::SliderFloat("Zoom Sensitivity", &ZoomSens, 0.001, 2, 0, "%0.3f"); 
-        if (TicksToGenMeshes_ > 0) 
+        for (Entity e : GetEntities()) 
         {
-            UI::Button("Finalizing..."); 
+            UI::BeginWindow("WorldGen", UI::WindowFlag::WindowFlagAutoResize); 
+            if (UI::Button("Generate")) 
+            {
+                GenWorld(scene->GetComponent<Planet>(e), 5); 
+            }
+            UI::EndWindow(); 
         }
-        else if (RegenMeshes_) 
-        {
-            UI::Button("Generating..."); 
-        }
-        else if (UI::Button("Generate"))
-        {
-            RegenMeshes_ = true; 
-            GenThread = new TestThread(this); 
-            GenThread->Start(); 
-        }
-        UI::SameLine(); 
-        if (UI::Button("Reset Zoom")) Zoom = 1.0; 
-
-        WindowMode mode = GetWindow()->GetMode(); 
-
-        UI::Separator(); 
-        bool vsync = GetWindow()->IsVSyncEnabled(); 
-        UI::Checkbox("VSync Enabled", &vsync); 
-        if (UI::Button("Windowed")) mode = WindowMode::Windowed; 
-        UI::SameLine(); 
-        if (UI::Button("Fullscreen")) mode = WindowMode::Fullscreen; 
-        if (UI::Button("Borderless")) mode = WindowMode::Borderless; 
-        UI::SameLine(); 
-        if (UI::Button("Quit")) Fjord::Stop(); 
-
-        UI::EndWindow(); 
-
-        GetWindow()->SetVSync(vsync); 
-        GetWindow()->SetMode(mode); 
-    }
-
-    virtual void Update(float dt) override 
-    {
-        auto input = GetInput(); 
-
-        float move = 5.0f * dt; 
-        float mouseScale = 0.002 * Zoom * (1 + std::fabs(std::sin(Yaw))); 
-        // float rot = 0.05f * FJ_TO_RAD; 
-
-        if (input->GetKey(KeyI)) CamPos += move * Vector3::Forward; 
-        if (input->GetKey(KeyK)) CamPos += move * Vector3::Backward; 
-        if (input->GetKey(KeyJ)) CamPos += move * Vector3::Left; 
-        if (input->GetKey(KeyL)) CamPos += move * Vector3::Right; 
-
-        if (input->GetButton(1)) 
-        {
-            Vector2 dMouse = input->GetMouseMove(); 
-            DYaw = dMouse.Y * mouseScale; 
-            DPitch = -dMouse.X * mouseScale; 
-        }
-
-        Zoom *= 1 - (0.1 * input->GetMouseWheel()) * ZoomSens; 
-
-        Yaw += DYaw; 
-        Pitch += DPitch; 
-
-        DYaw *= 0.9; 
-        DPitch *= 0.9; 
-
-        if (Yaw > FJ_PI_2 - 0.01) Yaw = FJ_PI_2 - 0.01; 
-        if (Yaw < -FJ_PI_2 + 0.01) Yaw = -FJ_PI_2 + 0.01; 
-
-        Quaternion rot = Quaternion::Identity; 
-        rot = Quaternion::AxisAngle(Vector3::Up, Pitch); 
-        rot = rot * Quaternion::AxisAngle(Vector3::Right, Yaw); 
-        rot = Normalized(rot); 
-
-        CamPos = rot * Vector3::Forward * 9; 
-
-        // Vector2 dMouse = input->GetMouseMove(); 
-        // dMouse *= rot; 
-
-        // CamRot += dMouse; 
-        // CamQuat = Quaternion::AxisAngle(Vector3::Left, -CamRot.Y) 
-        //         * Quaternion::AxisAngle(Vector3::Up, CamRot.X); 
-
-        Zoom = Clamp(Zoom, 0.0001, 5.0); 
-
-        if (CameraLight) 
-        {
-            Matrix4 tfm = Matrix4::RotationY(90 * FJ_TO_RAD); 
-            LightDirection = Normalized(Transform(tfm, -CamPos, true)); 
-            LightDirection.Y *= -1; 
-
-            Vector3 right = Normalized(Cross(Vector3::Up, LightDirection)); 
-            Vector3 up = Normalized(Cross(right, LightDirection)); 
-            LightDirection = Normalized(Quaternion::AxisAngle(up, 35 * FJ_TO_RAD) * LightDirection); 
-        }
-
-        if (TicksToGenMeshes_ > 0) TicksToGenMeshes_--; 
-
-        if (TicksToGenMeshes_ == 0 && RegenMeshes_ && GenThread && !GenThread->IsRunning()) 
-        {
-            TicksToGenMeshes_ = -1; 
-            RegenMeshes_ = false; 
-            GenMeshes(); 
-        }
-        else if (TicksToGenMeshes_ == -1 && RegenMeshes_ && GenThread && !GenThread->IsRunning()) 
-        {
-            TicksToGenMeshes_ = 2; 
-        }
-    }
+    };
 
     virtual void Render() override 
     {
-        auto graphics = GetGraphics(); 
+        auto* scene = GetScene(); 
+        auto* renderer = GetRenderer(); 
 
-        graphics->SetDepthTest(true); 
-        graphics->SetClearColor(Color::Black); 
-        graphics->Clear(true, true); 
-
-        graphics->SetPointSize(1); 
-        graphics->SetLineWidth(1); 
-
-        Matrix4 tfm = Matrix4::Perspective(15.0 * Zoom * FJ_TO_RAD, graphics->GetAspectRatio(), 0.1, 1000.0); 
-        tfm *= Matrix4::LookAt(CamPos, Vector3::Zero); 
-        tfm *= Matrix4::RotationY(90 * FJ_TO_RAD); 
-        // tfm *= Matrix4::RotationY(GetTimeSeconds()); 
-
-        graphics->ClearTextures(); 
-
-        LightShader->SetMatrix4("u_Model", tfm); 
-        LightShader->SetVector3("u_LightDirection", LightDirection); 
-        graphics->SetShader(LightShader); 
-
-        if (DrawCells && DrawShaded && CellMesh) 
+        for (Entity e : GetEntities()) 
         {
-            graphics->SetGeometry(CellMesh->GetGeometry()); 
-            graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
+            auto& planet = scene->GetComponent<Planet>(e); 
+            auto& tfm = scene->GetComponent<Transform>(e); 
+            tfm.SetScale(Vector3(100)); 
+
+            if (planet.CellMesh) 
+            {
+                renderer->DrawMesh(
+                    planet.CellMesh, 
+                    planet.MainMaterial, 
+                    tfm.GetMatrix() 
+                ); 
+            }
         }
+    };
 
-        BasicShader->SetMatrix4("u_Model", tfm); 
-        graphics->SetShader(BasicShader); 
-
-        if (DrawStars && StarMesh) 
-        {
-            graphics->SetGeometry(StarMesh->GetGeometry()); 
-            graphics->Draw(Primitive::Points, 0, StarMesh->GetVertexCount()); 
-        }
-
-        // if () 
-        // {
-        //     graphics->SetGeometry(PointMesh->GetGeometry()); 
-        //     graphics->Draw(Primitive::Points, 0, PointMesh->GetVertexCount()); 
-        // }
-
-        if (DrawCells && !DrawShaded && CellMesh) 
-        {
-            graphics->SetGeometry(CellMesh->GetGeometry()); 
-            graphics->DrawIndexed(Primitive::Triangles, 0, CellMesh->GetIndexCount()); 
-        }
-
-        if (DrawConnections && ConnMesh) 
-        {
-            graphics->SetGeometry(ConnMesh->GetGeometry()); 
-            graphics->DrawIndexed(Primitive::Lines, 0, ConnMesh->GetIndexCount()); 
-        }
-
-        if (DrawOutlines && EdgeMesh) 
-        {
-            graphics->SetGeometry(EdgeMesh->GetGeometry()); 
-            graphics->DrawIndexed(Primitive::Lines, 0, EdgeMesh->GetIndexCount()); 
-        }
-
-        if (DrawAirCurrents && AirMesh) 
-        {
-            graphics->SetGeometry(AirMesh->GetGeometry()); 
-            graphics->Draw(Primitive::Lines, 0, AirMesh->GetVertexCount()); 
-        }
-
-        if (DrawOceanCurrents && OceanMesh) 
-        {
-            graphics->SetGeometry(OceanMesh->GetGeometry()); 
-            graphics->Draw(Primitive::Lines, 0, OceanMesh->GetVertexCount()); 
-        }
-
-        Batch->Begin(); 
-        String info = ""; 
-        info += "FPS: " + ToString((int) GetFPS()); 
-        // info += "\n"; 
-        // info += "UPS: " + ToString((int) GetUPS()); 
-        Batch->DrawString(Color::White, 16, info.c_str(), 10, 20); 
-        if (MapTexture) Batch->Draw(MapTexture, Color::White, 350, 50, MapTexture->GetWidth(), MapTexture->GetHeight()); 
-        Batch->End(); 
-    }
-
-    void GenWorld() 
+private: 
+    void GenWorld(Planet& planet, unsigned worldSize) 
     {
-        GenTime = GetTimeSeconds(); 
-
         WorldGenerator gen; 
-        gen.AddRule(new SubdivideCellGenRule(WorldSize)); 
-        if (WorldSize > 1) gen.AddRule(new CellDistortRule()); 
+        gen.AddRule(new SubdivideCellGenRule(worldSize)); 
+        if (worldSize > 1) gen.AddRule(new CellDistortRule()); 
         gen.AddRule(new CellRelaxRule(50)); 
         gen.AddRule(new BasicTerrainGenRule()); 
-        gen.AddRule(new ClimateSimulationRule(70, 200)); 
+        // gen.AddRule(new ClimateSimulationRule(70, 200)); 
         class World w = gen.Generate();
 
-        FJ_DEBUG("Calculating spatial geometry...");
-        w.UpdateSpatialGeometry(); 
-
-        FJ_DEBUG("Replacing previous world..."); 
-        World = w; 
-
-        FJ_DEBUG("Generating meshes..."); 
-
-        GenMeshData(); 
+        planet.World = w; 
+        GenMeshData(planet); 
     }
 
-    void GenMeshData() 
+    void GenMeshData(Planet& planet) 
     {
-        Random r; 
+        Material* mat = new Material(); 
+        mat->SetShader(Shader::Load("Basic")); 
+        planet.MainMaterial = mat; 
 
-        // // points 
-        // {
-        //     FJ_DEBUG("Generating point mesh..."); 
-        //     PointMeshData = new MeshData(); 
-        //     Vector<Vector3>& verts = PointMeshData->Vertices; 
-        //     Vector<Vector4>& colors = PointMeshData->Colors; 
-        //     verts.resize(World.GetCellCount()); 
-        //     colors.resize(World.GetCellCount()); 
-        //     // for (CellId i = 0; i < World.GetCellCount(); i++) 
-        //     ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
-        //     {
-        //         verts[i] = World.GetPosition(i); 
-        //         colors[i] = {1, 1, 1, 1}; 
-        //     });
-        // }
-
-        FJ_DEBUG("Generating connection mesh..."); 
+        World& world = planet.World; 
 
         unsigned neighborCount = 0; 
-        Vector<unsigned> neighborIndex; neighborIndex.reserve(World.GetConnectionCount()); 
-        for (CellId i = 0; i < World.GetCellCount(); i++) 
+        Vector<unsigned> neighborIndex; neighborIndex.reserve(world.GetConnectionCount()); 
+        for (CellId i = 0; i < world.GetCellCount(); i++) 
         {
             neighborIndex.push_back(neighborCount); 
-            neighborCount += World.GetNeighborCount(i); 
+            neighborCount += world.GetNeighborCount(i); 
         }
-
-        // connections 
-        {
-            ConnMeshData = new MeshData(); 
-            Vector<Vector3>& verts = ConnMeshData->Vertices; 
-            Vector<Vector4>& colors = ConnMeshData->Colors; 
-            Vector<uint32>& inds = ConnMeshData->Indices; 
-            verts.resize(World.GetCellCount()); 
-            colors.resize(World.GetCellCount()); 
-            // TODO uses more memory than is needed
-            inds.resize(neighborCount * 2); 
-            // for (CellId i = 0; i < World.GetCellCount(); i++) 
-            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
-            {
-                verts[i] = World.GetPosition(i)*1.01; 
-                colors[i] = {0.1, 0.1, 0.1, 1}; 
-                unsigned nOffset = neighborIndex[i] * 2; 
-                for (CellId ni = 0; ni < World.GetNeighborCount(i); ni++) 
-                {
-                    CellId n = World.GetNeighbor(i, ni); 
-                    if (i < n) 
-                    {
-                        inds[nOffset++] = i; 
-                        inds[nOffset++] = n; 
-                    }
-                }
-            }); 
-        }
-
-        FJ_DEBUG("Generating outline mesh..."); 
-
-        // edges 
-        {
-            EdgeMeshData = new MeshData(); 
-            Vector<Vector3>& verts = EdgeMeshData->Vertices; 
-            Vector<Vector4>& colors = EdgeMeshData->Colors; 
-            Vector<uint32>& inds = EdgeMeshData->Indices; 
-            verts.resize(neighborCount); 
-            colors.resize(neighborCount); 
-            inds.resize(neighborCount * 2); 
-            // for (CellId i = 0; i < World.GetCellCount(); i++) 
-            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
-            {
-                Vector<Vector3> bounds = World.GetBounds(i); 
-                unsigned start = neighborIndex[i]; //verts.size(); 
-                unsigned index = start; 
-                for (Vector3& v : bounds) 
-                {
-                    verts[index] = v*1.001; 
-                    colors[index++] = {0, 0, 0, 1}; 
-                }
-
-                index = start; 
-
-                unsigned ind = neighborIndex[i] * 2; 
-                for (unsigned v = 0; v < bounds.size() - 1; v++) 
-                {
-                    inds[ind++] = (index++); 
-                    inds[ind++] = (index); 
-                }
-                inds[ind++] = (start); 
-                inds[ind++] = (start+bounds.size()-1); 
-            }); 
-        }
-
-        FJ_DEBUG("Generating cell mesh..."); 
 
         // cells 
         {
-            CellMeshData = new MeshData(); 
-            Vector<Vector3>& verts = CellMeshData->Vertices; 
-            Vector<Vector3>& normals = CellMeshData->Normals; 
-            Vector<Vector4>& colors = CellMeshData->Colors; 
-            Vector<uint32>& inds = CellMeshData->Indices; 
+            Ref<MeshData> cellMeshData = new MeshData(); 
+            Vector<Vector3>& verts = cellMeshData->Vertices; 
+            Vector<Vector3>& normals = cellMeshData->Normals; 
+            Vector<Vector4>& colors = cellMeshData->Colors; 
+            Vector<uint32>& inds = cellMeshData->Indices; 
             // verts.reserve(World.GetCellCount() * 6); 
             // colors.reserve(World.GetCellCount() * 6); 
             // normals.reserve(World.GetCellCount() * 6); 
@@ -509,19 +163,19 @@ public:
             verts.resize(neighborCount); 
             normals.resize(neighborCount); 
             colors.resize(neighborCount); 
-            inds.resize((neighborCount - World.GetCellCount()*2) * 3); 
+            inds.resize((neighborCount - world.GetCellCount()*2) * 3); 
             // for (CellId i = 0; i < World.GetCellCount(); i++) 
-            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i)
+            ParallelFor(CellId(0), CellId(world.GetCellCount()), [&](CellId i)
             {
-                Vector3 normal = World.GetPosition(i); 
-                Vector<Vector3> bounds = World.GetBounds(i); 
+                Vector3 normal = world.GetPosition(i); 
+                Vector<Vector3> bounds = world.GetBounds(i); 
                 unsigned start = neighborIndex[i]; //verts.size(); 
                 unsigned index = start; 
                 for (Vector3& v : bounds) 
                 {
                     verts[index] = v; 
                     normals[index] = normal; 
-                    colors[index++] = GetTerrainColor(World.GetTerrain(i)); 
+                    colors[index++] = GetTerrainColor(world.GetTerrain(i)); 
                 }
 
                 index = start + 1; 
@@ -534,188 +188,185 @@ public:
                     inds[ind++] = (index); 
                 }
             }); 
-        }
-
-        float scale = std::pow(10242.0f / World.GetCellCount(), 0.5f); 
-        FJ_DEBUG("Scale: %f", scale); 
-
-        FJ_DEBUG("Generating air current mesh..."); 
-        {
-            AirMeshData = new MeshData(); 
-            Vector<Vector3>& verts = AirMeshData->Vertices; 
-            Vector<Vector4>& colors = AirMeshData->Colors; 
-            verts.resize(World.GetCellCount()*2); 
-            colors.resize(World.GetCellCount()*2); 
-            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i) 
-            {
-                Vector3 pos = World.GetPosition(i); 
-                // TODO quaternion 
-                Quaternion q = World.GetWindCurrent(i); //Quaternion::AxisAngle(Vector3::Up + Vector3::Left, 0.5f); 
-
-                float angle = 2 * std::acos(q.W); 
-                Vector3 axis = {q.X, q.Y, q.Z}; 
-                axis = Normalized(axis); 
-
-                Vector3 posPrime = Quaternion::AxisAngle(axis, angle * 0.001) * pos; 
-                Vector3 move = Normalized(posPrime - pos) * angle; 
-
-                colors[i*2 + 0] = Color::Yellow; 
-                colors[i*2 + 1] = {1.0, 1.0, 1.0, 0.0}; 
-
-                verts[i*2 + 0] = pos * 1.001; 
-                verts[i*2 + 1] = pos * 1.001 + move * 0.1 * scale; 
-            }); 
-        }
-
-        FJ_DEBUG("Generating ocean current mesh..."); 
-        {
-            OceanMeshData = new MeshData(); 
-            Vector<Vector3>& verts = OceanMeshData->Vertices; 
-            Vector<Vector4>& colors = OceanMeshData->Colors; 
-            verts.resize(World.GetCellCount()*2); 
-            colors.resize(World.GetCellCount()*2); 
-            ParallelFor(CellId(0), CellId(World.GetCellCount()), [&](CellId i) 
-            {
-                if (IsTerrainWater(World.GetTerrain(i))) 
-                {
-                    Vector3 pos = World.GetPosition(i); 
-                    // TODO quaternion 
-                    Quaternion q = World.GetOceanCurrent(i); //Quaternion::AxisAngle(Vector3::Up + Vector3::Left, 0.5f); 
-
-                    float angle = 2 * std::acos(q.W); 
-                    Vector3 axis = {q.X, q.Y, q.Z}; 
-                    axis = Normalized(axis); 
-
-                    Vector3 posPrime = Quaternion::AxisAngle(axis, angle * 0.001) * pos; 
-                    Vector3 move = Normalized(posPrime - pos) * angle; 
-
-                    colors[i*2 + 0] = Color::White; 
-                    colors[i*2 + 1] = {1.0, 1.0, 1.0, 0.0}; 
-
-                    verts[i*2 + 0] = pos * 1.001; 
-                    verts[i*2 + 1] = pos * 1.001 + move * 0.1 * scale; 
-                }
-            }); 
+            planet.CellMesh = new Mesh(); 
+            cellMeshData->Apply(planet.CellMesh); 
+            planet.CellMesh->CalculateNormals(); 
         }
     }
+};
 
-    void GenMeshes() 
-    {
-        FJ_DEBUG("Finalizing..."); 
-
-        // StarMesh = new Mesh(); 
-        // StarMeshData->Apply(StarMesh); 
-        // StarMeshData = nullptr; 
-
-        // PointMesh = new Mesh(); 
-        // PointMeshData->Apply(PointMesh); 
-        // PointMeshData = nullptr; 
-
-        ConnMesh = new Mesh(); 
-        ConnMeshData->Apply(ConnMesh); 
-        ConnMeshData = nullptr; 
-
-        EdgeMesh = new Mesh(); 
-        EdgeMeshData->Apply(EdgeMesh); 
-        EdgeMeshData = nullptr; 
-
-        CellMesh = new Mesh(); 
-        CellMeshData->Apply(CellMesh); 
-        CellMeshData = nullptr; 
-
-        if (AirMeshData) 
-        {
-            AirMesh = new Mesh(); 
-            AirMeshData->Apply(AirMesh); 
-            AirMeshData = nullptr; 
-        }
-
-        if (OceanMeshData) 
-        {
-            OceanMesh = new Mesh(); 
-            OceanMeshData->Apply(OceanMesh); 
-            OceanMeshData = nullptr; 
-        }
-
-        GenTime = GetTimeSeconds() - GenTime; 
-
-        MapTexture = new Texture2D(256, 128, TextureFormat::RGB8); 
-        uint8* img = new uint8[3 * MapTexture->GetWidth() * MapTexture->GetHeight()]; 
-        for (int y = 0; y < MapTexture->GetHeight(); y++) 
-        {
-            float lat = 90.0f - y * 180.0f * MapTexture->GetInvHeight(); 
-            for (int x = 0; x < MapTexture->GetWidth(); x++) 
-            {
-                float lon = -180.0f + x * 360.0f * MapTexture->GetInvWidth(); 
-                Vector3 pos = GetPositionFromGeoCoords({lat, lon}); 
-
-                int i = 3 * (x + y * MapTexture->GetWidth()); 
-
-                CellId cell = World.GetCellIdPyPosition(pos); 
-                Terrain terrain = World.GetTerrain(cell); 
-                Color col = GetTerrainColor(terrain); 
-
-                img[i + 0] = (int) Map<float>(col.R, 0, 1, 0, 255); 
-                img[i + 1] = (int) Map<float>(col.G, 0, 1, 0, 255); 
-                img[i + 2] = (int) Map<float>(col.B, 0, 1, 0, 255); 
-            }
-        }
-        MapTexture->SetData(img); 
-        MapTexture->Update(); 
-        delete[] img; 
-
-        FJ_LOG(Debug, 
-            "Done! Created world with %u cell and %u connections in %0.1f seconds (%dkb)", 
-            World.GetCellCount(), 
-            World.GetConnectionCount(), 
-            GenTime, 
-            sizeof(Cell) * World.GetCellCount() / 1024 
-        ); 
-    }
-
-    // camera
-    Vector3 CamPos; 
-    float Zoom = 1; 
-    float Yaw = 0, Pitch = 0; 
-    float DYaw = 0, DPitch = 0; 
-    Quaternion CamQuat; 
-    // graphics 
-    bool RegenMeshes_ = true; 
-    int TicksToGenMeshes_ = -1; 
-    double GenTime = 0; 
-    Ref<Geometry> Geom; 
-    Ref<IndexBuffer> IB; 
-    Ref<VertexBuffer> VB; 
-    Ref<Shader> BasicShader, LightShader; 
-    Ref<Texture2D> MapTexture; 
-    Ref<Mesh> CubeMesh; 
-    Ref<SpriteBatch> Batch; 
-    bool DrawGrid = true; 
-    bool DrawConnections = false; 
-    bool DrawOutlines = false; 
-    bool DrawCells = true; 
-    bool DrawStars = true; 
-    bool DrawShaded = true; 
-    bool CameraLight = true; 
-    bool DrawAirCurrents = true; 
-    bool DrawOceanCurrents = false; 
-    Vector3 LightDirection = Vector3::Right; 
-    // world gen 
-    Ref<MeshData> PointMeshData, ConnMeshData, EdgeMeshData, CellMeshData, StarMeshData, AirMeshData, OceanMeshData; 
-    Ref<Mesh> PointMesh, ConnMesh, EdgeMesh, CellMesh, StarMesh, AirMesh, OceanMesh; 
-    class World World; 
-    int WorldSize = 5; 
-    Ref<Thread> GenThread; 
-    // gui 
-    Ref<Font> MyFont; 
-    float ZoomSens = 1.0; 
-    // Ref<Widget> UI, UI2; 
-}; 
-
-void TestThread::Run() 
+class FPSCameraSystem : public EntitySystem 
 {
-    Main_->RegenMeshes_ = true; 
-    Main_->GenWorld(); 
+public: 
+    FPSCameraSystem() 
+    {
+        IncludeComponent<FPSCamera>(); 
+        IncludeComponent<Transform>(); 
+    }
+
+    virtual void Update(float dt) override
+    { 
+        auto* scene = GetScene(); 
+        auto* input = GetInput(); 
+
+        const float MoveSpeed = 10; 
+        const float RotSpeed = 2; 
+
+        Vector3 move; 
+        if (input->GetKey(KeyI)) move += Vector3::Forward; 
+        if (input->GetKey(KeyK)) move += Vector3::Backward; 
+        if (input->GetKey(KeyJ)) move += Vector3::Left; 
+        if (input->GetKey(KeyL)) move += Vector3::Right; 
+        if (input->GetKey(KeyH)) move += Vector3::Up; 
+        if (input->GetKey(KeyN)) move += Vector3::Down; 
+        move *= MoveSpeed * dt; 
+
+        float rotRL = 0; 
+        float rotUD = 0; 
+        if (input->GetKey(KeyW)) rotUD += 1; 
+        if (input->GetKey(KeyS)) rotUD -= 1; 
+        if (input->GetKey(KeyA)) rotRL += 1; 
+        if (input->GetKey(KeyD)) rotRL -= 1; 
+        rotRL *= RotSpeed * dt; 
+        rotUD *= RotSpeed * dt; 
+
+        for (Entity e : GetEntities()) 
+        {
+            auto& tfm = scene->GetComponent<Transform>(e); 
+            auto& cam = scene->GetComponent<FPSCamera>(e); 
+
+            cam.RotX += rotUD; 
+            cam.RotY += rotRL; 
+
+            Quaternion rot = 
+                Quaternion::AxisAngle(Vector3::Up, cam.RotY) * 
+                Quaternion::AxisAngle(Vector3::Right, cam.RotX); 
+
+            tfm.SetRotation(rot); 
+            tfm.SetPosition(
+                tfm.GetPosition() + rot * move 
+            );
+        }
+    }
+};
+
+class RotateSystem : public EntitySystem 
+{
+public: 
+    RotateSystem() 
+    {
+        IncludeComponent<RotateTag>(); 
+        IncludeComponent<Transform>(); 
+    }
+
+    virtual void Update(float dt) override 
+    {
+        auto* scene = GetScene(); 
+
+        for (Entity e : GetEntities()) 
+        {
+            auto& tfm = scene->GetComponent<Transform>(e); 
+            auto& rot = scene->GetComponent<RotateTag>(e); 
+
+            double time = (100 + GetTimeSeconds()) * rot.Amount; 
+
+            Quaternion newRot = Quaternion::FromMatrix4(
+                Matrix4::RotationX(1.31 * time) * 
+                Matrix4::RotationY(1.63 * time) * 
+                Matrix4::RotationZ(1.79 * time) 
+            );
+
+            tfm.SetRotation(newRot); 
+        }
+    }
+};
+
+void Main::Init() 
+{
+    Fjord::Scene::RegisterComponent<FPSCamera>(); 
+    Fjord::Scene::RegisterComponent<RotateTag>(); 
+    Fjord::Scene::RegisterComponent<Planet>(); 
+
+    Scene = new Fjord::Scene(); 
+
+    Scene->AddSystem(new FPSCameraSystem()); 
+    Scene->AddSystem(new RotateSystem()); 
+    Scene->AddSystem(new WorldGenSystem()); 
+    Scene->AddSystem(new MeshRenderSystem()); 
+    Scene->AddSystem(new LightRenderSystem());
+    Scene->AddSystem(new CameraRenderSystem()); 
+
+    Mesh* mesh = Mesh::CreateCube(); 
+    Material* mat = new Material(); 
+    mat->SetShader(Shader::Load("Basic")); 
+
+    Material* lightMat = new Material(); 
+    lightMat->SetShader(Shader::Load("Basic")); 
+    lightMat->SetVector4("fj_Emissive", {1.0, 1.0, 1.0, 1.0}); 
+
+    GetWindow()->SetVSync(false); 
+
+    Random r; 
+    float range = 50; 
+    for (int i = 0; i < 1000; i++)
+    {
+        // create cube 
+        Entity e = Scene->CreateEntity(); 
+        auto& tfm = Scene->GetComponent<Transform>(e); 
+        auto& mc = Scene->AddComponent<MeshContainer>(e); 
+        auto& rot = Scene->AddComponent<RotateTag>(e); 
+        mc.SetMesh(mesh); 
+        mc.SetMaterial(mat); 
+        tfm.SetPosition({
+            r.NextFloat() * range - range * 0.5f, 
+            r.NextFloat() * range - range * 0.5f, 
+            r.NextFloat() * range - range * 0.5f 
+        });
+        rot.Amount = r.NextFloat() * 1; 
+    }
+
+    {
+        // create camera 
+        Entity e = Scene->CreateEntity(); 
+        auto& tfm = Scene->GetComponent<Transform>(e); 
+        auto& cam = Scene->AddComponent<Camera>(e); 
+        auto& light = Scene->AddComponent<Light>(e); 
+        Scene->AddComponent<FPSCamera>(e); 
+        
+        tfm.SetPosition(Vector3::Backward * 5); 
+        cam.SetFOV(70.0f); 
+
+        light.SetType(LightType::Point); 
+        light.SetColor(Color::White); 
+        light.SetRadius(100.0f); 
+    }
+
+    {
+        // create planet 
+        Entity e = Scene->CreateEntity(); 
+        Scene->AddComponent<Planet>(e); 
+    }
+}
+
+void Main::UpdateGUI(float dt) 
+{
+    (void) dt; 
+
+    // UI::BeginWindow("Debug", UI::WindowFlag::WindowFlagAutoResize); 
+    // if (UI::Button("Quit")) Fjord::Stop(); 
+    // UI::EndWindow(); 
+
+    Scene->UpdateGUI(); 
+}
+
+void Main::Update(float dt) 
+{
+    Scene->Update(dt); 
+}
+
+void Main::Render() 
+{
+    Scene->Render(); 
 }
 
 ENGINE_MAIN_CLASS(Main) 
