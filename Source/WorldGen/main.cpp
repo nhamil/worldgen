@@ -34,6 +34,7 @@
 
 #include "WorldGen/World.h" 
 #include "WorldGen/WorldGenerator.h" 
+#include "WorldGen/WorldGenSystem.h" 
 
 #include <iostream> 
 
@@ -64,137 +65,6 @@ public:
     float Amount = 1.0f;  
 }; 
 
-class Planet : public Component 
-{
-public: 
-    class World World; 
-    Ref<Material> MainMaterial; 
-    Ref<Mesh> CellMesh, OutlineMesh; 
-};
-
-class WorldGenSystem : public EntitySystem 
-{
-public: 
-    WorldGenSystem() 
-    {
-        IncludeComponent<Planet>(); 
-        IncludeComponent<Transform>(); 
-    }
-
-    virtual void UpdateGUI() override 
-    {
-        auto* scene = GetScene(); 
-
-        for (Entity e : GetEntities()) 
-        {
-            UI::BeginWindow("WorldGen", UI::WindowFlag::WindowFlagAutoResize); 
-            if (UI::Button("Generate")) 
-            {
-                GenWorld(scene->GetComponent<Planet>(e), 5); 
-            }
-            UI::EndWindow(); 
-        }
-    };
-
-    virtual void Render() override 
-    {
-        auto* scene = GetScene(); 
-        auto* renderer = GetRenderer(); 
-
-        for (Entity e : GetEntities()) 
-        {
-            auto& planet = scene->GetComponent<Planet>(e); 
-            auto& tfm = scene->GetComponent<Transform>(e); 
-            tfm.SetScale(Vector3(100)); 
-
-            if (planet.CellMesh) 
-            {
-                renderer->DrawMesh(
-                    planet.CellMesh, 
-                    planet.MainMaterial, 
-                    tfm.GetMatrix() 
-                ); 
-            }
-        }
-    };
-
-private: 
-    void GenWorld(Planet& planet, unsigned worldSize) 
-    {
-        WorldGenerator gen; 
-        gen.AddRule(new SubdivideCellGenRule(worldSize)); 
-        if (worldSize > 1) gen.AddRule(new CellDistortRule()); 
-        gen.AddRule(new CellRelaxRule(50)); 
-        gen.AddRule(new BasicTerrainGenRule()); 
-        // gen.AddRule(new ClimateSimulationRule(70, 200)); 
-        class World w = gen.Generate();
-
-        planet.World = w; 
-        GenMeshData(planet); 
-    }
-
-    void GenMeshData(Planet& planet) 
-    {
-        Material* mat = new Material(); 
-        mat->SetShader(Shader::Load("Basic")); 
-        planet.MainMaterial = mat; 
-
-        World& world = planet.World; 
-
-        unsigned neighborCount = 0; 
-        Vector<unsigned> neighborIndex; neighborIndex.reserve(world.GetConnectionCount()); 
-        for (CellId i = 0; i < world.GetCellCount(); i++) 
-        {
-            neighborIndex.push_back(neighborCount); 
-            neighborCount += world.GetNeighborCount(i); 
-        }
-
-        // cells 
-        {
-            Ref<MeshData> cellMeshData = new MeshData(); 
-            Vector<Vector3>& verts = cellMeshData->Vertices; 
-            Vector<Vector3>& normals = cellMeshData->Normals; 
-            Vector<Vector4>& colors = cellMeshData->Colors; 
-            Vector<uint32>& inds = cellMeshData->Indices; 
-            // verts.reserve(World.GetCellCount() * 6); 
-            // colors.reserve(World.GetCellCount() * 6); 
-            // normals.reserve(World.GetCellCount() * 6); 
-            // inds.reserve(World.GetCellCount() * 6 * 3); 
-            verts.resize(neighborCount); 
-            normals.resize(neighborCount); 
-            colors.resize(neighborCount); 
-            inds.resize((neighborCount - world.GetCellCount()*2) * 3); 
-            // for (CellId i = 0; i < World.GetCellCount(); i++) 
-            ParallelFor(CellId(0), CellId(world.GetCellCount()), [&](CellId i)
-            {
-                Vector3 normal = world.GetPosition(i); 
-                Vector<Vector3> bounds = world.GetBounds(i); 
-                unsigned start = neighborIndex[i]; //verts.size(); 
-                unsigned index = start; 
-                for (Vector3& v : bounds) 
-                {
-                    verts[index] = v; 
-                    normals[index] = normal; 
-                    colors[index++] = GetTerrainColor(world.GetTerrain(i)); 
-                }
-
-                index = start + 1; 
-                
-                unsigned ind = (neighborIndex[i] - i*2) * 3; 
-                for (unsigned v = 0; v < bounds.size() - 2; v++) 
-                {
-                    inds[ind++] = (start); 
-                    inds[ind++] = (index++); 
-                    inds[ind++] = (index); 
-                }
-            }); 
-            planet.CellMesh = new Mesh(); 
-            cellMeshData->Apply(planet.CellMesh); 
-            planet.CellMesh->CalculateNormals(); 
-        }
-    }
-};
-
 class FPSCameraSystem : public EntitySystem 
 {
 public: 
@@ -209,7 +79,7 @@ public:
         auto* scene = GetScene(); 
         auto* input = GetInput(); 
 
-        const float MoveSpeed = 10; 
+        const float MoveSpeed = 50; 
         const float RotSpeed = 2; 
 
         Vector3 move; 
@@ -307,7 +177,7 @@ void Main::Init()
     GetWindow()->SetVSync(false); 
 
     Random r; 
-    float range = 50; 
+    float range = 300; 
     for (int i = 0; i < 1000; i++)
     {
         // create cube 
@@ -333,7 +203,7 @@ void Main::Init()
         auto& light = Scene->AddComponent<Light>(e); 
         Scene->AddComponent<FPSCamera>(e); 
         
-        tfm.SetPosition(Vector3::Backward * 5); 
+        tfm.SetPosition(Vector3::Backward * 12); 
         cam.SetFOV(70.0f); 
 
         light.SetType(LightType::Point); 
@@ -341,10 +211,19 @@ void Main::Init()
         light.SetRadius(100.0f); 
     }
 
+    range = 300; 
+    for (int i = 0; i < 1; i++) 
     {
         // create planet 
         Entity e = Scene->CreateEntity(); 
         Scene->AddComponent<Planet>(e); 
+        auto& tfm = Scene->GetComponent<Transform>(e); 
+
+        // tfm.SetPosition({
+        //     r.NextFloat() * range - range * 0.5f, 
+        //     r.NextFloat() * range - range * 0.5f, 
+        //     r.NextFloat() * range - range * 0.5f 
+        // });
     }
 }
 

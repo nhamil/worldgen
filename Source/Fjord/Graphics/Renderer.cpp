@@ -40,7 +40,7 @@ namespace Fjord
 
         auto* graphics = GetGraphics(); 
 
-        graphics->SetClearColor(Color(0.6f, 0.8f, 1.0f)); 
+        graphics->SetClearColor(Color(0.0f, 0.0f, 0.0f)); 
         graphics->Clear(true, true); 
     }
 

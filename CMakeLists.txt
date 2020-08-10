@@ -13,6 +13,7 @@ set(SOURCES
     ${WORLDGEN_SOURCE_FOLDER}/main.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/World.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/WorldGenerator.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/WorldGenSystem.cpp 
 
     ${WORLDGEN_SOURCE_FOLDER}/ClimateSimulationRule.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/BasicTerrainGenRule.cpp 
