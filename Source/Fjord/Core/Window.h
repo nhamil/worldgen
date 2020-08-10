@@ -38,6 +38,8 @@ namespace Fjord
 
         WindowMode GetMode() const; 
 
+        void SetGrabMouse(bool grab); 
+
         Input* GetInput() 
         {
             return &Input_; 

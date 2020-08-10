@@ -129,7 +129,8 @@ namespace Fjord
 
     void Shader::UploadToGPU() 
     {
-        GLCALL(glUseProgram(Handle_)); 
+        // GLCALL(glUseProgram(Handle_)); 
+        GetAPI()->BindShader(Handle_); 
 
         for (auto& name : UpdateParameterSet_) 
         {
@@ -191,7 +192,8 @@ namespace Fjord
         {
             // if (graphics_->GetShader() == this) graphics_->SetShader(nullptr); 
 
-            GLCALL(glDeleteProgram(Handle_)); 
+            // GLCALL(glDeleteProgram(Handle_)); 
+            GetAPI()->DeleteShader(Handle_); 
             Handle_ = 0; 
         }
     } 

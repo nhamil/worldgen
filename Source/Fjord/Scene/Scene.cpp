@@ -7,6 +7,8 @@
 #include "Fjord/Scene/Group.h" 
 #include "Fjord/Scene/Transform.h" 
 
+#include <algorithm> 
+
 namespace Fjord 
 {
 
@@ -81,6 +83,11 @@ namespace Fjord
         {
             Systems_.push_back(system); 
             system->HandleAttach(this); 
+
+            std::sort(Systems_.begin(), Systems_.end(), [](Ref<EntitySystem>& a, Ref<EntitySystem>& b) -> bool 
+            {
+                return a->GetPriority() < b->GetPriority(); 
+            });
         }
     }
 

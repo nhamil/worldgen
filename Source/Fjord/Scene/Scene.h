@@ -13,7 +13,7 @@ namespace Fjord
      * Stores all scene information. 
      * This includes all current entities, components, and systems. 
      */ 
-    class Scene : public RefCounted 
+    class Scene
     {
         FJ_NO_COPY(Scene); 
     public: 

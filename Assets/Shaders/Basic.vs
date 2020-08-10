@@ -6,6 +6,7 @@
 
 struct LightData 
 {
+    vec4 Ambient; 
     vec4 Color; 
     vec3 Position; 
     vec3 Direction; 

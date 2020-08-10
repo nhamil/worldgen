@@ -5,6 +5,8 @@
 namespace Fjord 
 {
 
+    class GraphicsAPI; 
+
     class Graphics
     {
     public: 
@@ -15,6 +17,9 @@ namespace Fjord
 
         void BeginFrame(); 
         void EndFrame(); 
+
+        GraphicsState GetState(); 
+        void SetState(GraphicsState state); 
 
         void ClearTextures(); 
         void SetTexture(unsigned index, Texture2D* texture); 
@@ -33,6 +38,8 @@ namespace Fjord
         void ResetClip(); 
         void SetClip(int x, int y, int w, int h); 
 
+        void SetBlendMode(BlendMode source, BlendMode dest); 
+
         void SetPointSize(float size); 
         void SetLineWidth(float width); 
 
@@ -43,7 +50,11 @@ namespace Fjord
         void Draw(Primitive prim, unsigned startInd, unsigned numInds); 
         void DrawIndexed(Primitive prim, unsigned startInd, unsigned numInds); 
 
+        GraphicsAPI* GetAPI() { return API_; } 
+
     private: 
+        GraphicsAPI* API_; 
+
         Ref<Shader> CurShader_; 
         Ref<Geometry> CurGeom_; 
         Ref<Texture2D> CurTextures_[MaxTextureCount];

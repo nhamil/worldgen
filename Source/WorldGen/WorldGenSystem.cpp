@@ -90,6 +90,7 @@ void WorldGenSystem::UpdateGUI()
     bool gen = false; 
     UI::BeginWindow("WorldGen", UI::WindowFlag::WindowFlagAutoResize); 
     if (UI::Button("Generate")) gen = true; 
+    if (UI::Button("Quit")) Fjord::Stop(); 
     UI::EndWindow(); 
 
     int i = 0; 
@@ -120,9 +121,10 @@ void WorldGenSystem::UpdateGUI()
                 planet.GenThread = nullptr; 
             }
 
-            if (gen) //UI::Button("Generate")) 
+            if (gen || planet.Empty) //UI::Button("Generate")) 
             {
-                planet.GenThread = new WorldGenThread(8); 
+                planet.Empty = false; 
+                planet.GenThread = new WorldGenThread(5); 
                 planet.GenThread->Start(); 
             }
         }

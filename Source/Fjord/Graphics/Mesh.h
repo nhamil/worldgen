@@ -45,6 +45,7 @@ namespace Fjord
         Vector<Vector2> GetTexCoords() const; 
 
         Primitive GetPrimitive() const; 
+        RenderQueue GetRenderQueue() const; 
 
         unsigned GetIndexCount() const; 
         unsigned GetVertexCount() const; 
@@ -63,6 +64,7 @@ namespace Fjord
         void SetTexCoords(const Vector<Vector2>& texCoords); 
 
         void SetPrimitive(Primitive prim); 
+        void SetRenderQueue(RenderQueue queue); 
 
         void Clear();   
         void ClearIndices(); 
@@ -92,6 +94,7 @@ namespace Fjord
         VertexBuffer* GetOrMakeVertexBuffer(Attribute attrib, bool shouldExist); 
 
         Primitive Primitive_ = Primitive::Triangles; 
+        RenderQueue RenderQueue_ = RenderQueue::Opaque; 
         Ref<VertexBuffer> VertexBuffers_[(unsigned) Attribute::count]; 
         Ref<Geometry> Geometry_; 
         Ref<IndexBuffer> IndexBuffer_; 

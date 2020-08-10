@@ -9,7 +9,13 @@ namespace Fjord
     class EntitySystem : public RefCounted 
     {
     public: 
-        EntitySystem(); 
+        static const unsigned DefaultPriority = 1000; 
+        static const unsigned PreUpdatePriority = 10; 
+        static const unsigned HighPriority = 100; 
+        static const unsigned LowPriority = 10000; 
+        static const unsigned PostUpdatePriority = 100000; 
+
+        EntitySystem(unsigned priority = DefaultPriority); 
         virtual ~EntitySystem() = default; 
 
         virtual void OnAttach() {} 
@@ -21,9 +27,13 @@ namespace Fjord
 
         virtual void Render() {} 
 
-        Scene* GetScene() const { return Scene_.Get(); } 
+        unsigned GetPriority() const { return Priority_; } 
+
+        Scene* GetScene() const { return Scene_; } 
 
         Group* GetGroup() const { return Group_; } 
+
+        const EntityFilter& GetFilter() const { return Filter_; } 
 
         Vector<Entity> GetEntities() const; 
 
@@ -52,12 +62,12 @@ namespace Fjord
 
         void UpdateGroup(); 
 
+        unsigned Priority_; 
         EntityFilter Filter_; 
         Ref<Group> Group_; 
-        WeakRef<Scene> Scene_; 
+        Scene* Scene_; 
     };
 
 }
 
 #include "Fjord/Scene/Group.h" 
-#include "Fjord/Scene/Scene.h" 

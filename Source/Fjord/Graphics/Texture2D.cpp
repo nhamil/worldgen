@@ -138,7 +138,8 @@ namespace Fjord
     {
         if (Handle_ != 0) 
         {
-            GLCALL(glDeleteTextures(1, &Handle_)); 
+            // GLCALL(glDeleteTextures(1, &Handle_)); 
+            GetAPI()->DeleteTexture2D(Handle_); 
             Handle_ = 0; 
         }
     }
@@ -147,7 +148,8 @@ namespace Fjord
     {
         if (!Dirty_ && !DirtyParams_) return; 
 
-        GLCALL(glBindTexture(GL_TEXTURE_2D, Handle_)); 
+        // GLCALL(glBindTexture(GL_TEXTURE_2D, Handle_)); 
+        GetAPI()->BindTexture2D(Handle_); 
 
         // TODO needed? 
         GLCALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1)); 
@@ -186,7 +188,8 @@ namespace Fjord
         // TODO do parameters affect mipmaps? 
         // GLCALL(glGenerateMipmap(GL_TEXTURE_2D)); 
 
-        GLCALL(glBindTexture(GL_TEXTURE_2D, 0)); 
+        // GLCALL(glBindTexture(GL_TEXTURE_2D, 0)); 
+        GetAPI()->BindTexture2D(0); 
 
         Dirty_ = DirtyParams_ = false; 
     }

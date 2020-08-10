@@ -3,7 +3,8 @@
 namespace Fjord 
 {
 
-    EntitySystem::EntitySystem() 
+    EntitySystem::EntitySystem(unsigned priority) 
+        : Priority_(priority) 
     {
 
     }
@@ -16,10 +17,10 @@ namespace Fjord
 
     void EntitySystem::HandleAttach(Scene* scene) 
     {
-        if (Scene_.Get()) HandleDetach(); 
+        if (Scene_) HandleDetach(); 
 
         Scene_ = scene; 
-        if (Scene_.Get()) 
+        if (Scene_) 
         {
             OnAttach(); 
         }

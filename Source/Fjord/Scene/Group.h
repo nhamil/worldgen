@@ -24,7 +24,7 @@ namespace Fjord
 
         Scene* GetScene() 
         {
-            return Scene_.Get(); 
+            return Scene_; 
         }
 
         const EntityFilter& GetFilter() 
@@ -38,11 +38,9 @@ namespace Fjord
         Group(Scene* scene, const EntityFilter& filter); 
 
         EntityFilter Filter_; 
-        WeakRef<Scene> Scene_; 
+        Scene* Scene_; 
         Vector<Entity> Entities_; 
         uint64 UpdateVersion_; 
     };
 
 }
-
-#include "Fjord/Scene/Scene.h" 

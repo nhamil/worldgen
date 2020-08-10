@@ -139,6 +139,16 @@ namespace Fjord
         Primitive_ = prim; 
     }
 
+    RenderQueue Mesh::GetRenderQueue() const 
+    {
+        return RenderQueue_; 
+    }
+
+    void Mesh::SetRenderQueue(RenderQueue queue) 
+    {
+        RenderQueue_ = queue; 
+    }
+
     unsigned Mesh::GetIndexCount() const 
     {
         if (IndexBuffer_) 

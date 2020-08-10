@@ -24,7 +24,7 @@ namespace Fjord
         {
             UpdateVersion_ = Scene_->GetUpdateVersion(); 
             Entities_.clear(); 
-            FJ_EASSERT(Scene_.Get()); 
+            FJ_EASSERT(Scene_); 
             Scene_->GetEntities(Filter_, Entities_); 
             return true; 
         }

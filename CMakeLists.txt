@@ -32,6 +32,7 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Graphics/IndexBuffer.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Geometry.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Graphics.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/GraphicsAPI.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Light.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Material.cpp
     ${FJORD_SOURCE_FOLDER}/Graphics/Mesh.cpp 

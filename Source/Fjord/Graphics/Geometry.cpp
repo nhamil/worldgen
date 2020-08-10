@@ -18,7 +18,8 @@ namespace Fjord
         // FJ_EFDEBUG("dtor"); 
         if (Handle_ != 0) 
         {
-            GLCALL(glDeleteVertexArrays(1, &Handle_)); 
+            // GLCALL(glDeleteVertexArrays(1, &Handle_)); 
+            GetAPI()->DeleteVertexArray(Handle_); 
             Handle_ = 0; 
         }
     }
@@ -36,14 +37,16 @@ namespace Fjord
 
         if (!Dirty_) return; 
 
-        GLCALL(glBindVertexArray(Handle_)); 
+        // GLCALL(glBindVertexArray(Handle_)); 
+        GetAPI()->BindVertexArray(Handle_); 
 
         GLuint ibo = 0; 
         if (IndexBuffer_) 
         {
             ibo = IndexBuffer_->GetHandle(); 
         }
-        GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo)); 
+        // GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo)); 
+        GetAPI()->BindIndexbuffer(ibo, true); 
 
         int attribs[(unsigned) Attribute::count]; 
 
@@ -75,7 +78,8 @@ namespace Fjord
             {
                 GLCALL(glEnableVertexAttribArray(i)); 
                 auto vb = VertexBuffers_[attribs[i]].Get(); 
-                GLCALL(glBindBuffer(GL_ARRAY_BUFFER, vb->GetHandle())); 
+                // GLCALL(glBindBuffer(GL_ARRAY_BUFFER, vb->GetHandle())); 
+                GetAPI()->BindVertexBuffer(vb->GetHandle(), true); 
                 GLCALL(glVertexAttribPointer(
                     i, 
                     AttributeSize[i], 
@@ -87,7 +91,8 @@ namespace Fjord
             }
         }
 
-        GLCALL(glBindVertexArray(0)); 
+        // GLCALL(glBindVertexArray(0)); 
+        GetAPI()->BindVertexArray(0); 
 
         Dirty_ = false; 
     }

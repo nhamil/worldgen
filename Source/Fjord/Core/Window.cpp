@@ -27,25 +27,48 @@ namespace Fjord
 
     static bool s_SDLInitiated = false; 
 
-    static Key s_SDLKeyToKey[KEY_MAP_SIZE]; 
+    static HashMap<SDL_Keycode, Key> s_SDLKeyToKey; 
     
     static Key SDLKeyToKey(SDL_Keycode code) 
     {
-        if (code >= KEY_MAP_SIZE) 
-        {
-            // FJ_EFLOG(Warn, "Key out of bounds: %d", code); 
-            return KeyUnknown; 
-        }
+        FJ_EFDEBUG("%d", code == KeyEquals); 
+        return (Key) code; 
+        // auto it = s_SDLKeyToKey.find(code); 
 
-        return s_SDLKeyToKey[code]; 
+        // if (it == s_SDLKeyToKey.end()) 
+        // {
+        //     // FJ_EFLOG(Warn, "Unknown key: %x", code); 
+        //     return KeyUnknown; 
+        // }
+        // else 
+        // {
+        //     return it->second; 
+        // }
     }
 
     void InitSDL() 
     {
-        for (unsigned k = KeyA; k <= KeyZ; k++) 
-        {
-            s_SDLKeyToKey[k] = (Key) k; 
-        }
+        // for (unsigned k = KeyA; k <= KeyZ; k++) 
+        // {
+        //     s_SDLKeyToKey[k] = (Key) k; 
+        // }
+        // for (unsigned k = Key0; k <= Key9; k++) 
+        // {
+        //     s_SDLKeyToKey[k] = (Key) k; 
+        // }
+        // for (unsigned k = 0; k < 12; k++) 
+        // {
+        //     s_SDLKeyToKey[SDLK_F1 + k] = (Key) (KeyF1 + k); 
+        // }
+        // s_SDLKeyToKey[SDLK_RETURN] = KeyEnter; 
+        // s_SDLKeyToKey[SDLK_BACKSPACE] = KeyBackspace; 
+        // s_SDLKeyToKey[SDLK_SPACE] = KeySpace; 
+        // s_SDLKeyToKey[SDLK_LSHIFT] = KeyLShift; 
+        // s_SDLKeyToKey[SDLK_RSHIFT] = KeyRShift; 
+        // s_SDLKeyToKey[SDLK_LALT] = KeyLAlt; 
+        // s_SDLKeyToKey[SDLK_RALT] = KeyRAlt; 
+        // s_SDLKeyToKey[SDLK_LCTRL] = KeyLControl; 
+        // s_SDLKeyToKey[SDLK_RCTRL] = KeyRControl; 
 
         if (!s_SDLInitiated) 
         {
@@ -151,6 +174,11 @@ namespace Fjord
                     break; 
             }
         }
+    }
+
+    void Window::SetGrabMouse(bool grab) 
+    {
+        SDL_SetRelativeMouseMode(grab ? SDL_TRUE : SDL_FALSE);
     }
 
     int Window::GetWidth() const 

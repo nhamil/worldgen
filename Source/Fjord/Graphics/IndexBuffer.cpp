@@ -17,7 +17,8 @@ namespace Fjord
     {
         if (Handle_ != 0) 
         {
-            GLCALL(glDeleteBuffers(1, &Handle_)); 
+            // GLCALL(glDeleteBuffers(1, &Handle_)); 
+            GetAPI()->DeleteIndexBuffer(Handle_); 
             Handle_ = 0; 
         }
         // FJ_EFDEBUG("dtor"); 
@@ -55,7 +56,8 @@ namespace Fjord
 
         FJ_EASSERT(Handle_ != 0); 
 
-        GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Handle_)); 
+        // GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Handle_)); 
+        GetAPI()->BindIndexbuffer(Handle_, false); 
         GLCALL(glBufferData(
             GL_ELEMENT_ARRAY_BUFFER, 
             GetElementCount() * sizeof(uint32), 

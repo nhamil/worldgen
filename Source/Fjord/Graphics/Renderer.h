@@ -2,6 +2,7 @@
 
 #include "Fjord/Common.h" 
 #include "Fjord/Graphics/Camera.h" 
+#include "Fjord/Graphics/Color.h" 
 #include "Fjord/Graphics/Light.h" 
 #include "Fjord/Graphics/Material.h" 
 #include "Fjord/Graphics/Mesh.h" 
@@ -41,6 +42,8 @@ namespace Fjord
         void BeginFrame(); 
         void EndFrame(); 
 
+        void SetAmbientColor(const Color& color); 
+
         void AddCamera(Camera* camera, const Matrix4& transform); 
 
         void DrawLight(Light* light, const Vector3& position, const Vector3& direction); 
@@ -48,6 +51,7 @@ namespace Fjord
         void DrawMesh(Mesh* mesh, Material* material, const Matrix4& transform); 
 
     private: 
+        Color AmbientColor_; 
         Vector<MeshRenderData> Meshes_; 
         Vector<LightRenderData> Lights_; 
         Vector<CameraRenderData> Cameras_; 

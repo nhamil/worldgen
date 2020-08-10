@@ -9,7 +9,7 @@
 namespace Fjord 
 {
 
-    MeshRenderSystem::MeshRenderSystem() 
+    MeshRenderSystem::MeshRenderSystem() : EntitySystem(EntitySystem::PostUpdatePriority)
     {
         IncludeComponent<MeshContainer>(); 
         IncludeComponent<Transform>(); 
@@ -40,7 +40,7 @@ namespace Fjord
         }
     }
 
-    LightRenderSystem::LightRenderSystem() 
+    LightRenderSystem::LightRenderSystem() : EntitySystem(EntitySystem::PostUpdatePriority)
     {
         IncludeComponent<Light>(); 
         IncludeComponent<Transform>(); 
@@ -64,7 +64,7 @@ namespace Fjord
         }
     }
 
-    CameraRenderSystem::CameraRenderSystem() 
+    CameraRenderSystem::CameraRenderSystem() : EntitySystem(EntitySystem::PostUpdatePriority) 
     {
         IncludeComponent<Camera>(); 
         IncludeComponent<Transform>(); 

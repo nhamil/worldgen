@@ -11,6 +11,7 @@ namespace Fjord
     class Input; 
     class Logger; 
     class Renderer; 
+    class Scene; 
     class Window; 
 
     int Start(Application* app); 
@@ -28,6 +29,8 @@ namespace Fjord
     Window* GetWindow(); 
 
     Input* GetInput(); 
+
+    Scene* GetScene(); 
 
     Graphics* GetGraphics(); 
 

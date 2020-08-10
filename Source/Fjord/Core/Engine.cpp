@@ -6,6 +6,7 @@
 #include "Fjord/Core/Window.h" 
 #include "Fjord/Graphics/Graphics.h" 
 #include "Fjord/Graphics/Renderer.h" 
+#include "Fjord/Graphics/RenderSystems.h" 
 #include "Fjord/Scene/Scene.h" 
 #include "Fjord/Scene/Transform.h" 
 #include "Fjord/Util/Time.h" 
@@ -25,6 +26,7 @@ namespace Fjord
     static Logger* g_EngineLogger = nullptr; 
     static Application* g_App = nullptr; 
     static Renderer* g_Renderer = nullptr; 
+    static Scene* g_Scene = nullptr; 
 
     static bool g_Running = false; 
 
@@ -54,11 +56,15 @@ namespace Fjord
             g_Window->Poll(); 
             // g_GUI->HandleUpdate(skipUpdates); 
             UI::StartFrame(); 
-            g_App->UpdateGUI(skipUpdates); 
+            g_App->PreUpdateGUI(); 
+            g_Scene->UpdateGUI(); 
+            g_App->PostUpdateGUI(); 
             bool mouseDown = GetInput()->GetButton(1); 
             // TODO quick hack to stop game from using mouse when UI is using it 
             if (UI::HasActiveWidget()) GetInput()->OnMouseUp(1); 
-            g_App->Update(skipUpdates); 
+            g_App->PreUpdate(skipUpdates); 
+            g_Scene->Update(skipUpdates); 
+            g_App->PostUpdate(skipUpdates); 
             if (mouseDown) GetInput()->OnMouseDown(1); 
             UI::FinishFrame(); 
         }
@@ -77,7 +83,9 @@ namespace Fjord
             g_Graphics->BeginFrame(); 
             g_Renderer->BeginFrame(); 
 
-            g_App->Render(); 
+            g_App->PreRender(); 
+            g_Scene->Render(); 
+            g_App->PostRender(); 
             
             g_Renderer->EndFrame(); 
             g_Graphics->Clear(false, true); 
@@ -109,8 +117,6 @@ namespace Fjord
 
         g_Running = true; 
 
-        Scene::RegisterComponent<Transform>(); 
-
         // g_GUI = new GUIEnvironment(g_Window->GetWidth(), g_Window->GetHeight()); 
 
         g_App = app; 
@@ -119,6 +125,12 @@ namespace Fjord
         g_Input = g_Window->GetInput(); 
         g_Graphics = new Graphics(); 
         g_Renderer = new Renderer(); 
+        g_Scene = new Scene(); 
+
+        g_Scene->AddSystem(new MeshRenderSystem()); 
+        g_Scene->AddSystem(new LightRenderSystem());
+        g_Scene->AddSystem(new CameraRenderSystem()); 
+
         g_App->Init(); 
 
         time = GetTimeSeconds(); 
@@ -173,6 +185,11 @@ namespace Fjord
     Input* GetInput() 
     {
         return g_Input; 
+    }
+
+    Scene* GetScene() 
+    {
+        return g_Scene; 
     }
 
     Graphics* GetGraphics() 

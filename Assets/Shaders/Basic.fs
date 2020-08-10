@@ -6,6 +6,7 @@
 
 struct LightData 
 {
+    vec4 Ambient; 
     vec4 Color; 
     vec3 Position; 
     vec3 Direction; 
@@ -52,6 +53,6 @@ void main()
     vec3 lighting = diffuse + spec; 
 
     // f_Color = v_Color;
-    f_Color.rgb = fj_Emissive.rgb + v_Color.rgb * lighting; 
+    f_Color.rgb = fj_LightData.Ambient.rgb + fj_Emissive.rgb + v_Color.rgb * lighting; 
     f_Color.a = v_Color.a; 
 }

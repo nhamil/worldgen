@@ -32,6 +32,11 @@ namespace Fjord
 
     }
 
+    void Renderer::SetAmbientColor(const Color& color) 
+    {
+        AmbientColor_ = color; 
+    }
+
     void Renderer::BeginFrame() 
     {
         Meshes_.clear(); 
@@ -40,8 +45,11 @@ namespace Fjord
 
         auto* graphics = GetGraphics(); 
 
-        graphics->SetClearColor(Color(0.0f, 0.0f, 0.0f)); 
+        graphics->SetClearColor(Color(0.0f, 0.0f, 0.0f, 0.0f)); 
         graphics->Clear(true, true); 
+        // graphics->SetBlendMode(BlendMode::One, BlendMode::One); 
+        graphics->SetBlendMode(BlendMode::One, BlendMode::Zero); 
+        graphics->SetDepthTest(true); 
     }
 
     void Renderer::EndFrame() 
@@ -56,8 +64,17 @@ namespace Fjord
             Matrix4 camTfm = cam.Transform; 
             Matrix3 camNorm = Matrix3(Transpose(Inverse(camTfm))); 
 
+            bool first = true; 
             for (LightRenderData& light : Lights_) 
             {
+                if (first) 
+                {
+                    graphics->SetBlendMode(BlendMode::One, BlendMode::Zero); 
+                }
+                else 
+                {
+                    graphics->SetBlendMode(BlendMode::One, BlendMode::One); 
+                }
                 for (MeshRenderData& instance : Meshes_) 
                 {
                     Mesh* mesh = instance.Mesh; 
@@ -72,6 +89,7 @@ namespace Fjord
                     shader->SetMatrix4("fj_ModelView", modelView); 
                     shader->SetMatrix3("fj_NormalMatrix", normalMat); 
 
+                    shader->SetVector4("fj_LightData.Ambient", first ? AmbientColor_ : Color::Black); 
                     shader->SetVector4("fj_LightData.Color", light.LightData.GetColor()); 
                     shader->SetVector3("fj_LightData.Position", TransformVector(camTfm, light.Position, true)); 
                     shader->SetVector3("fj_LightData.Direction", camNorm * light.Direction); 
@@ -96,8 +114,11 @@ namespace Fjord
                         );
                     }
                 }
+                first = false; 
             }
         }
+
+        graphics->SetBlendMode(BlendMode::SourceAlpha, BlendMode::OneMinusSourceAlpha); 
     }
 
     void Renderer::AddCamera(Camera* cam, const Matrix4& tfm) 

@@ -45,11 +45,8 @@ class Main : public Application
 {
 public: 
     virtual void Init() override; 
-    virtual void UpdateGUI(float dt) override; 
-    virtual void Update(float dt) override; 
-    virtual void Render() override; 
-
-    Ref<Fjord::Scene> Scene; 
+    virtual void PreUpdate(float dt) override; 
+    virtual void PreRender() override; 
 }; 
 
 class FPSCamera : public Component 
@@ -65,10 +62,19 @@ public:
     float Amount = 1.0f;  
 }; 
 
+class OrbitTag : public Component 
+{
+public: 
+    Entity Orbits = Scene::NullEntity; 
+    float Distance = 10.0f; 
+    float Angle = 0.0f; 
+    float Speed = 10.0f; 
+};
+
 class FPSCameraSystem : public EntitySystem 
 {
 public: 
-    FPSCameraSystem() 
+    FPSCameraSystem()
     {
         IncludeComponent<FPSCamera>(); 
         IncludeComponent<Transform>(); 
@@ -79,16 +85,18 @@ public:
         auto* scene = GetScene(); 
         auto* input = GetInput(); 
 
-        const float MoveSpeed = 50; 
+        const float MoveSpeed = 10; 
         const float RotSpeed = 2; 
+        const float MouseSpeed = 0.0005; 
 
         Vector3 move; 
         if (input->GetKey(KeyI)) move += Vector3::Forward; 
         if (input->GetKey(KeyK)) move += Vector3::Backward; 
         if (input->GetKey(KeyJ)) move += Vector3::Left; 
         if (input->GetKey(KeyL)) move += Vector3::Right; 
-        if (input->GetKey(KeyH)) move += Vector3::Up; 
-        if (input->GetKey(KeyN)) move += Vector3::Down; 
+        if (input->GetKey(KeySpace)) move += Vector3::Up; 
+        if (input->GetKey(KeySemicolon)) move += Vector3::Down; 
+        if (input->GetKey(KeyQuote)) move *= 10; 
         move *= MoveSpeed * dt; 
 
         float rotRL = 0; 
@@ -99,6 +107,9 @@ public:
         if (input->GetKey(KeyD)) rotRL -= 1; 
         rotRL *= RotSpeed * dt; 
         rotUD *= RotSpeed * dt; 
+
+        rotRL += MouseSpeed * -input->GetMouseMove().X; 
+        rotUD += MouseSpeed * -input->GetMouseMove().Y; 
 
         for (Entity e : GetEntities()) 
         {
@@ -123,7 +134,7 @@ public:
 class RotateSystem : public EntitySystem 
 {
 public: 
-    RotateSystem() 
+    RotateSystem()
     {
         IncludeComponent<RotateTag>(); 
         IncludeComponent<Transform>(); 
@@ -151,20 +162,61 @@ public:
     }
 };
 
+class OrbitSystem : public EntitySystem 
+{
+public: 
+    OrbitSystem()
+    {
+        IncludeComponent<Transform>(); 
+        IncludeComponent<OrbitTag>(); 
+    }
+
+    virtual void Update(float dt) override 
+    {
+        auto* scene = GetScene(); 
+
+        for (Entity e : GetEntities()) 
+        {
+            auto& orbit = scene->GetComponent<OrbitTag>(e); 
+            auto& tfm = scene->GetComponent<Transform>(e); 
+
+            orbit.Angle += orbit.Speed * dt; 
+
+            if (scene->IsEntityValid(orbit.Orbits)) 
+            {
+                if (auto* orbitTfm = scene->TryGetComponent<Transform>(orbit.Orbits)) 
+                {
+                    Quaternion rot = Quaternion::AxisAngle(Vector3::Up, orbit.Angle); 
+                    Vector3 pos = rot * Vector3::Forward * orbit.Distance; 
+                    tfm.SetPosition(pos); 
+                    tfm.SetRotation(rot); 
+                } 
+                else 
+                {
+                    FJ_WARN("Attempting to orbit an entity without a transform"); 
+                }
+            }
+            else 
+            {
+                FJ_WARN("Attempting to orbit an entity that does not exist"); 
+            }
+        }
+    };
+};
+
 void Main::Init() 
 {
-    Fjord::Scene::RegisterComponent<FPSCamera>(); 
-    Fjord::Scene::RegisterComponent<RotateTag>(); 
-    Fjord::Scene::RegisterComponent<Planet>(); 
+    auto* scene = GetScene(); 
 
-    Scene = new Fjord::Scene(); 
+    Scene::RegisterComponent<FPSCamera>(); 
+    Scene::RegisterComponent<RotateTag>(); 
+    Scene::RegisterComponent<Planet>(); 
+    Scene::RegisterComponent<OrbitTag>(); 
 
-    Scene->AddSystem(new FPSCameraSystem()); 
-    Scene->AddSystem(new RotateSystem()); 
-    Scene->AddSystem(new WorldGenSystem()); 
-    Scene->AddSystem(new MeshRenderSystem()); 
-    Scene->AddSystem(new LightRenderSystem());
-    Scene->AddSystem(new CameraRenderSystem()); 
+    scene->AddSystem(new FPSCameraSystem()); 
+    scene->AddSystem(new RotateSystem()); 
+    scene->AddSystem(new WorldGenSystem()); 
+    scene->AddSystem(new OrbitSystem()); 
 
     Mesh* mesh = Mesh::CreateCube(); 
     Material* mat = new Material(); 
@@ -174,17 +226,46 @@ void Main::Init()
     lightMat->SetShader(Shader::Load("Basic")); 
     lightMat->SetVector4("fj_Emissive", {1.0, 1.0, 1.0, 1.0}); 
 
-    GetWindow()->SetVSync(false); 
+    GetWindow()->SetVSync(true); 
+    GetWindow()->SetMode(WindowMode::Fullscreen); 
+
+    Entity planet; 
+    {
+        // create planet 
+        planet = scene->CreateEntity(); 
+        scene->AddComponent<Planet>(planet); 
+
+        const int NumLights = 2; 
+        for (int i = 0; i < NumLights; i++) 
+        {
+            Entity l = scene->CreateEntity(); 
+
+            auto& orbit = scene->AddComponent<OrbitTag>(l); 
+            orbit.Angle = (float) i / NumLights * FJ_2_PI; 
+            orbit.Orbits = planet; 
+            orbit.Distance = 25; 
+            orbit.Speed = 20 * FJ_TO_RAD; 
+
+            auto& mc = scene->AddComponent<MeshContainer>(l); 
+            mc.SetMesh(mesh); 
+            mc.SetMaterial(lightMat); 
+
+            auto& light = scene->AddComponent<Light>(l); 
+            light.SetType(LightType::Point); 
+            light.SetColor(Color::White); 
+            light.SetRadius(100.0f); 
+        }
+    }
 
     Random r; 
     float range = 300; 
     for (int i = 0; i < 1000; i++)
     {
         // create cube 
-        Entity e = Scene->CreateEntity(); 
-        auto& tfm = Scene->GetComponent<Transform>(e); 
-        auto& mc = Scene->AddComponent<MeshContainer>(e); 
-        auto& rot = Scene->AddComponent<RotateTag>(e); 
+        Entity e = scene->CreateEntity(); 
+        auto& tfm = scene->GetComponent<Transform>(e); 
+        auto& mc = scene->AddComponent<MeshContainer>(e); 
+        auto& rot = scene->AddComponent<RotateTag>(e); 
         mc.SetMesh(mesh); 
         mc.SetMaterial(mat); 
         tfm.SetPosition({
@@ -193,59 +274,54 @@ void Main::Init()
             r.NextFloat() * range - range * 0.5f 
         });
         rot.Amount = r.NextFloat() * 1; 
+
+        auto& orbit = scene->AddComponent<OrbitTag>(e); 
+        orbit.Angle = r.NextFloat() * FJ_2_PI; 
+        orbit.Orbits = planet; 
+        orbit.Distance = r.NextFloat() * 1000 + 20; 
+        orbit.Speed = 400 / orbit.Distance * FJ_TO_RAD; 
     }
 
     {
         // create camera 
-        Entity e = Scene->CreateEntity(); 
-        auto& tfm = Scene->GetComponent<Transform>(e); 
-        auto& cam = Scene->AddComponent<Camera>(e); 
-        auto& light = Scene->AddComponent<Light>(e); 
-        Scene->AddComponent<FPSCamera>(e); 
+        Entity e = scene->CreateEntity(); 
+        auto& tfm = scene->GetComponent<Transform>(e); 
+        auto& cam = scene->AddComponent<Camera>(e); 
+        // auto& light = scene->AddComponent<Light>(e); 
+        scene->AddComponent<FPSCamera>(e); 
         
-        tfm.SetPosition(Vector3::Backward * 12); 
+        tfm.SetPosition(Vector3::Backward * 20); 
         cam.SetFOV(70.0f); 
 
-        light.SetType(LightType::Point); 
-        light.SetColor(Color::White); 
-        light.SetRadius(100.0f); 
-    }
-
-    range = 300; 
-    for (int i = 0; i < 1; i++) 
-    {
-        // create planet 
-        Entity e = Scene->CreateEntity(); 
-        Scene->AddComponent<Planet>(e); 
-        auto& tfm = Scene->GetComponent<Transform>(e); 
-
-        // tfm.SetPosition({
-        //     r.NextFloat() * range - range * 0.5f, 
-        //     r.NextFloat() * range - range * 0.5f, 
-        //     r.NextFloat() * range - range * 0.5f 
-        // });
+        // light.SetType(LightType::Point); 
+        // light.SetColor(Color::White); 
+        // light.SetRadius(100.0f); 
     }
 }
 
-void Main::UpdateGUI(float dt) 
+void Main::PreUpdate(float dt) 
 {
     (void) dt; 
+    auto* input = GetInput(); 
 
-    // UI::BeginWindow("Debug", UI::WindowFlag::WindowFlagAutoResize); 
-    // if (UI::Button("Quit")) Fjord::Stop(); 
-    // UI::EndWindow(); 
-
-    Scene->UpdateGUI(); 
+    if (input->GetKey(KeyEscape)) 
+    {
+        GetWindow()->SetGrabMouse(false); 
+    }
+    if (input->GetButton(1)) 
+    {
+        GetWindow()->SetGrabMouse(true); 
+    }
+    if (input->GetKey(KeyEnter)) 
+    {
+        FJ_DEBUG("enter"); 
+        Fjord::Stop(); 
+    }
 }
 
-void Main::Update(float dt) 
+void Main::PreRender() 
 {
-    Scene->Update(dt); 
-}
-
-void Main::Render() 
-{
-    Scene->Render(); 
+    GetRenderer()->SetAmbientColor({0.1, 0.1, 0.1}); 
 }
 
 ENGINE_MAIN_CLASS(Main) 

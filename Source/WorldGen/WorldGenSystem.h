@@ -25,6 +25,7 @@ private:
 class Planet : public Component 
 {
 public: 
+    bool Empty = true; 
     class World World; 
     Ref<WorldGenThread> GenThread; 
     Ref<Material> MainMaterial; 

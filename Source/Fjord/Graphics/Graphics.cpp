@@ -25,18 +25,40 @@ namespace Fjord
         }
     }
 
+    inline GLenum GetGLBlendMode(BlendMode mode) 
+    {
+        switch (mode) 
+        {
+            case BlendMode::One: return GL_ONE; 
+            case BlendMode::Zero: return GL_ZERO; 
+            case BlendMode::SourceAlpha: return GL_SRC_ALPHA; 
+            case BlendMode::OneMinusSourceAlpha: return GL_ONE_MINUS_SRC_ALPHA; 
+            default: 
+                FJ_EFLOG(Warn, "Unknown blend mode: %d", mode); 
+                return 0; 
+        }
+    }
+
+    GraphicsAPI* GPUObject::GetAPI() 
+    {
+        return GetGraphics()->GetAPI(); 
+    }
+
     Graphics::Graphics() 
     {
         SetDepthTest(true); 
         GLCALL(glEnable(GL_BLEND));
-        GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); 
+        // GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); 
+        SetBlendMode(BlendMode::SourceAlpha, BlendMode::OneMinusSourceAlpha); 
         GLCALL(glEnable(GL_MULTISAMPLE)); 
         // GLCALL(glEnable(GL_SCISSOR_TEST)); 
+
+        API_ = new GraphicsAPI(); 
     }
 
     Graphics::~Graphics() 
     {
-        
+        delete API_; 
     }
 
     void Graphics::BeginFrame() 
@@ -133,6 +155,11 @@ namespace Fjord
         }
     }
 
+    void Graphics::SetBlendMode(BlendMode src, BlendMode dst) 
+    {
+        GLCALL(glBlendFunc(GetGLBlendMode(src), GetGLBlendMode(dst))); 
+    }
+
     void Graphics::SetPointSize(float size) 
     {
         GLCALL(glPointSize(size)); 
@@ -176,8 +203,10 @@ namespace Fjord
         CurShader_->Update(); 
         CurGeom_->Update(); 
 
-        GLCALL(glUseProgram(CurShader_->GetHandle())); 
-        GLCALL(glBindVertexArray(CurGeom_->GetHandle())); 
+        // GLCALL(glUseProgram(CurShader_->GetHandle())); 
+        // GLCALL(glBindVertexArray(CurGeom_->GetHandle())); 
+        API_->BindShader(CurShader_->GetHandle()); 
+        API_->BindVertexArray(CurGeom_->GetHandle()); 
 
         GLCALL(glDrawArrays(
             GetGLPrimitive(prim), 
@@ -193,26 +222,28 @@ namespace Fjord
         CurShader_->Update(); 
         CurGeom_->Update(); 
 
-        // not sure that vertex arrays keep track of index buffers 
-        // TODO figure this out 
         IndexBuffer* ib = CurGeom_->GetIndexBuffer(); 
 
         for (unsigned i = 0; i < MaxTextureCount; i++) 
         {
-            GLCALL(glActiveTexture(GL_TEXTURE0 + i)); 
+            // GLCALL(glActiveTexture(GL_TEXTURE0 + i)); 
             if (CurTextures_[i]) 
             {
-                GLCALL(glBindTexture(GL_TEXTURE_2D, CurTextures_[i]->GetHandle())); 
+                // GLCALL(glBindTexture(GL_TEXTURE_2D, CurTextures_[i]->GetHandle())); 
+                API_->BindTexture2D(CurTextures_[i]->GetHandle(), (int) i); 
             }
             else 
             {
-                GLCALL(glBindTexture(GL_TEXTURE_2D, 0)); 
+                // GLCALL(glBindTexture(GL_TEXTURE_2D, 0)); 
+                API_->BindTexture2D(0, (int) i); 
             }
         }
 
-        GLCALL(glUseProgram(CurShader_->GetHandle())); 
-        GLCALL(glBindVertexArray(CurGeom_->GetHandle())); 
-        GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->GetHandle())); 
+        // GLCALL(glUseProgram(CurShader_->GetHandle())); 
+        // GLCALL(glBindVertexArray(CurGeom_->GetHandle())); 
+        // GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->GetHandle())); 
+        API_->BindShader(CurShader_->GetHandle()); 
+        API_->BindVertexArray(CurGeom_->GetHandle()); 
 
         GLCALL(glDrawElements(
             GetGLPrimitive(prim), 

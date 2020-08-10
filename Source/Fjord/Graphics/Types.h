@@ -12,6 +12,7 @@ namespace Fjord
     class Shader; 
     class Texture2D; 
     class VertexFormat; 
+    class GraphicsAPI; 
     
     using GPUHandle = unsigned; 
 
@@ -26,6 +27,7 @@ namespace Fjord
         
     protected: 
         GPUHandle Handle_ = 0; 
+        GraphicsAPI* GetAPI(); 
     };
 
     enum class TextureFormat 
@@ -77,6 +79,65 @@ namespace Fjord
         Triangles
     };
 
+    enum class BlendMode 
+    {
+        /**
+         * All color 
+         */ 
+        One, 
+
+        /** 
+         * No color 
+         */ 
+        Zero, 
+
+        /**
+         * Color multiplied by the source alpha 
+         */ 
+        SourceAlpha, 
+
+        /**
+         * Color multiplied by (1 - source alpha) 
+         */ 
+        OneMinusSourceAlpha, 
+    };
+
+    enum class RenderQueue 
+    {
+        /**
+         * No transparency, fastest
+         */ 
+        Opaque, 
+
+        /**
+         * Fully opaque or fully transparent 
+         */ 
+        Transparent, 
+
+        /**
+         * Partial transparency, avoid when possible as it is slower and less accurate
+         */ 
+        Translucent 
+    };
+
+    enum class FillMode 
+    {
+        /** 
+         * Draw full triangles 
+         */ 
+        Full, 
+
+        /** 
+         * Wireframe 
+         */ 
+        Line, 
+
+        /** 
+         * Points 
+         */ 
+        Point 
+    };
+
     inline unsigned GetPrimitiveElementCount(Primitive prim) 
     {
         switch (prim) 
@@ -89,6 +150,24 @@ namespace Fjord
                 return 0; 
         }
     }
+
+    enum class FrontFace 
+    {
+        /** 
+         * No culling 
+         */ 
+        Both, 
+
+        /**
+         * Forward faces are in a clockwise order 
+         */ 
+        CW, 
+
+        /** 
+         * Forward faces are in a counter-clockwise order 
+         */ 
+        CCW 
+    };
 
     enum class LightType 
     {
@@ -122,6 +201,16 @@ namespace Fjord
         3, 3, 3, 
         2, 2, 
         4, 4 
+    };
+
+    struct GraphicsState 
+    {
+        BlendMode SourceBlendMode = BlendMode::One; 
+        BlendMode DestBlendMode = BlendMode::Zero; 
+        Fjord::FillMode FillMode = Fjord::FillMode::Full; 
+        Fjord::FrontFace FrontFace = Fjord::FrontFace::CCW; 
+        bool DepthWrite = true; 
+        bool DepthTest = true; 
     };
 
 } 
