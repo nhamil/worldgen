@@ -11,6 +11,7 @@ struct LightData
     vec3 Position; 
     vec3 Direction; 
     int Type; 
+    float Radius; 
 };
 
 in vec3 a_Position; 

@@ -11,6 +11,7 @@ struct LightData
     vec3 Position; 
     vec3 Direction; 
     int Type; 
+    float Radius; 
 };
 
 in vec3 v_ViewPosition; 
@@ -29,13 +30,19 @@ void main()
     vec3 L; // light direction
     vec3 H; // half
 
+    float atten = 1.0; 
+
     if (fj_LightData.Type == LIGHT_DIRECTIONAL) 
     {
         L = -normalize(fj_LightData.Direction); 
     }
     else // point or spotlight
     {
-        L = -normalize(v_ViewPosition - fj_LightData.Position); 
+        L = v_ViewPosition - fj_LightData.Position; 
+        float len = length(L);
+        L = -L/len; 
+        len /= fj_LightData.Radius; 
+        atten = 1.0 / (1.0 + len*len); 
     }
 
     H = normalize(N + L); 
@@ -53,6 +60,6 @@ void main()
     vec3 lighting = diffuse + spec; 
 
     // f_Color = v_Color;
-    f_Color.rgb = fj_Emissive.rgb + v_Color.rgb * (lighting + fj_LightData.Ambient.rgb); 
+    f_Color.rgb = fj_Emissive.rgb + v_Color.rgb * atten * (lighting + fj_LightData.Ambient.rgb); 
     f_Color.a = v_Color.a; 
 }

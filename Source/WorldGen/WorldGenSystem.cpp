@@ -1,5 +1,8 @@
 #include "WorldGen/WorldGenSystem.h" 
 
+#include "Fjord/Graphics/PostProcess.h" 
+#include "Fjord/Graphics/Renderer.h" 
+
 WorldGenThread::WorldGenThread(unsigned worldSize) 
 {
     WorldGenerator& gen = Generator_; 
@@ -85,13 +88,22 @@ WorldGenSystem::WorldGenSystem()
 
 void WorldGenSystem::UpdateGUI() 
 {
+    static float BloomAmt = 5.0; 
+    static float BloomThreshold = 1.0; 
+
     auto* scene = GetScene(); 
 
     bool gen = false; 
     UI::BeginWindow("WorldGen", UI::WindowFlag::WindowFlagAutoResize); 
     if (UI::Button("Generate")) gen = true; 
+    UI::SliderFloat("Strength", &BloomAmt, 0.0, 100.0); 
+    UI::SliderFloat("Threshold", &BloomThreshold, 0.0, 2.0); 
     if (UI::Button("Quit")) Fjord::Stop(); 
     UI::EndWindow(); 
+
+    auto* pipeline = GetRenderer()->GetPostProcessPipeline(); 
+    pipeline->GetEffect<BloomEffect>()->SetStrength(BloomAmt); 
+    pipeline->GetEffect<BloomEffect>()->SetThreshold(BloomThreshold); 
 
     for (Entity e : GetEntities()) 
     {

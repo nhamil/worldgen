@@ -100,6 +100,7 @@ namespace Fjord
                     shader->SetVector3("fj_LightData.Position", TransformVector(camTfm, light.Position, true)); 
                     shader->SetVector3("fj_LightData.Direction", camNorm * light.Direction); 
                     shader->SetInt("fj_LightData.Type", (int) light.LightData.GetType()); 
+                    shader->SetFloat("fj_LightData.Radius", light.LightData.GetRadius()); 
 
                     graphics->SetShader(shader); 
                     graphics->SetGeometry(mesh->GetGeometry()); 

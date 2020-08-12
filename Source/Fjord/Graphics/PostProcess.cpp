@@ -33,6 +33,8 @@ namespace Fjord
     {
         auto* graphics = GetGraphics(); 
 
+        if (Strength_ <= 0.0) return; 
+
         float scale = 1.0; 
         RTSwap_->SetSize(target->GetWidth() * scale, target->GetHeight() * scale); 
         RTSwap_->Clear(); 
@@ -45,6 +47,8 @@ namespace Fjord
 
         BloomShader_->SetTextureUnit("u_Texture", 0); 
         BloomShader_->SetInt("u_Horizontal", 0); 
+        BloomShader_->SetInt("u_Strength", Max<int>(Strength_ * scale * RTSwap_->GetDest()->GetHeight() / 600, 1)); 
+        BloomShader_->SetVector4("u_Color", Color_); 
         graphics->SetTexture(0, RTSwap_->GetSource()->GetColorBuffer(0)); 
         target->ApplyEffect(RTSwap_->GetSource(), RTSwap_->GetDest(), BloomShader_); 
         RTSwap_->Swap(); 

@@ -215,7 +215,7 @@ void Main::Init()
     auto* scene = GetScene(); 
 
     auto* pipeline = GetRenderer()->GetPostProcessPipeline(); 
-    pipeline->AddEffect<BloomEffect>()->SetThreshold(1); 
+    pipeline->AddEffect<BloomEffect>()->SetThreshold(0.9); 
 
     Scene::RegisterComponent<FPSCamera>(); 
     Scene::RegisterComponent<RotateTag>(); 
