@@ -3,6 +3,7 @@
 #include "Fjord/Common.h" 
 #include "Fjord/Core/Input.h" 
 #include "Fjord/Graphics/Color.h" 
+#include "Fjord/Graphics/Graphics.h" 
 #include "Fjord/Graphics/Font.h" 
 #include "Fjord/Graphics/SpriteBatch.h" 
 #include "Fjord/Math/MathUtil.h" 
@@ -490,6 +491,10 @@ namespace Fjord { namespace UI
         {
             Batch = new SpriteBatch(); 
         }
+
+        auto* graphics = GetGraphics(); 
+        graphics->SetRenderTarget(nullptr); 
+        graphics->ResetViewport(); 
 
         Batch->Begin(); 
 

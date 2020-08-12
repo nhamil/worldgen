@@ -99,4 +99,28 @@ namespace Fjord
         }
     }
 
+    void GraphicsAPI::BindFramebuffer(GPUHandle read, GPUHandle draw) 
+    {
+        if (read == draw) 
+        {
+            if (FramebufferDrawId != read || FramebufferReadId != read) 
+            {
+                GLCALL(glBindFramebuffer(GL_FRAMEBUFFER, read)); 
+                FramebufferDrawId = FramebufferReadId = read; 
+            }
+        }
+        else 
+        {
+            FJ_EFFATAL("Separate read/write framebuffers not supported yet!"); 
+            exit(1); 
+        }
+    }
+
+    void GraphicsAPI::DeleteFramebuffer(GPUHandle id) 
+    {
+        GPUHandle read = FramebufferReadId == id ? 0 : FramebufferReadId; 
+        GPUHandle draw = FramebufferDrawId == id ? 0 : FramebufferDrawId; 
+        BindFramebuffer(read, draw); 
+    }
+
 }

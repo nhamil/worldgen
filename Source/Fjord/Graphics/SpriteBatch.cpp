@@ -253,10 +253,10 @@ namespace Fjord
         ty1 = Lerp(Ty0, Ty1, fy1); 
 
         VertexPositionTextureColor verts[4] = {
-            {{x0, y0, z}, {tx0, ty0}, col}, 
-            {{x1, y0, z}, {tx1, ty0}, col}, 
-            {{x1, y1, z}, {tx1, ty1}, col}, 
-            {{x0, y1, z}, {tx0, ty1}, col}, 
+            {{x0, y0, z}, {tx0, ty1}, col}, 
+            {{x1, y0, z}, {tx1, ty1}, col}, 
+            {{x1, y1, z}, {tx1, ty0}, col}, 
+            {{x0, y1, z}, {tx0, ty0}, col}, 
         };
         AddRect(verts); 
     }  
@@ -335,10 +335,10 @@ namespace Fjord
             ty1 = Lerp(Ty0, Ty1, fy1); 
 
             VertexPositionTextureColor verts[4] = {
-                {{x0, y0, z}, {tx0, ty0}, col}, 
-                {{x1, y0, z}, {tx1, ty0}, col}, 
-                {{x1, y1, z}, {tx1, ty1}, col}, 
-                {{x0, y1, z}, {tx0, ty1}, col}, 
+                {{x0, y0, z}, {tx0, ty1}, col}, 
+                {{x1, y0, z}, {tx1, ty1}, col}, 
+                {{x1, y1, z}, {tx1, ty0}, col}, 
+                {{x0, y1, z}, {tx0, ty0}, col}, 
             };
             AddRect(verts); 
         }
@@ -363,6 +363,7 @@ namespace Fjord
         shader->SetTextureUnit("u_Texture", 0); 
         shader->Update(); 
 
+        graphics->SetBlendMode(BlendMode::SourceAlpha, BlendMode::OneMinusSourceAlpha); 
         graphics->SetShader(shader); 
         graphics->SetGeometry(Geometry_); 
         graphics->SetTexture(0, Texture_); 

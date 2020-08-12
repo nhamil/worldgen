@@ -53,6 +53,6 @@ void main()
     vec3 lighting = diffuse + spec; 
 
     // f_Color = v_Color;
-    f_Color.rgb = fj_LightData.Ambient.rgb + fj_Emissive.rgb + v_Color.rgb * lighting; 
+    f_Color.rgb = fj_Emissive.rgb + v_Color.rgb * (lighting + fj_LightData.Ambient.rgb); 
     f_Color.a = v_Color.a; 
 }

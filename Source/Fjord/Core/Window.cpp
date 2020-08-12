@@ -31,7 +31,6 @@ namespace Fjord
     
     static Key SDLKeyToKey(SDL_Keycode code) 
     {
-        FJ_EFDEBUG("%d", code == KeyEquals); 
         return (Key) code; 
         // auto it = s_SDLKeyToKey.find(code); 
 

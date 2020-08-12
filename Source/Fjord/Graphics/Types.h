@@ -35,13 +35,25 @@ namespace Fjord
         R8, 
         RG8, 
         RGB8, 
-        RGBA8
+        RGBA8, 
+        RGBA16F, 
+        RGBA32F, 
+        Depth16, 
+        Depth24, 
+        Depth24Stencil8, 
+        Depth32 
     };
 
     inline unsigned GetTextureFormatByteCount(TextureFormat format) 
     {
         switch (format) 
         {
+            case TextureFormat::Depth32: return 8; 
+            case TextureFormat::Depth24Stencil8: return 4; 
+            case TextureFormat::Depth24: return 3; 
+            case TextureFormat::Depth16: return 2; 
+            case TextureFormat::RGBA32F: return 16; 
+            case TextureFormat::RGBA16F: return 8; 
             case TextureFormat::RGBA8: return 4; 
             case TextureFormat::RGB8: return 3; 
             case TextureFormat::RG8: return 2; 
@@ -52,11 +64,39 @@ namespace Fjord
         }
     }
 
+    inline bool IsTextureFormatDepthFormat(TextureFormat format) 
+    {
+        switch (format) 
+        {
+            case TextureFormat::Depth32: 
+            case TextureFormat::Depth24Stencil8: 
+            case TextureFormat::Depth24: 
+            case TextureFormat::Depth16: return true; 
+            default: return false; 
+        }
+    }
+
+    inline bool IsTextureFormatColorFormat(TextureFormat format) 
+    {
+        return !IsTextureFormatDepthFormat(format); 
+    }
+
+    inline bool IsTextureFormatStencilFormat(TextureFormat format) 
+    {
+        return format == TextureFormat::Depth24Stencil8; 
+    }
+
     enum class AddressMode 
     {
         Clamp, 
         Repeat
     }; 
+
+    enum class TextureType 
+    {
+        Texture2D, 
+        RenderTexture 
+    };
 
     enum class TextureAxis 
     {

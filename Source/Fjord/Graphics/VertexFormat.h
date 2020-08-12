@@ -21,6 +21,12 @@ namespace Fjord
         struct Color Color; 
     };
 
+    struct VertexPositionTexture 
+    {
+        Vector3 Position; 
+        Vector2 Texture; 
+    };
+
     struct VertexPositionTextureColor 
     {
         Vector3 Position; 
@@ -38,6 +44,7 @@ namespace Fjord
         static const VertexFormat Texture0; 
         
         static const VertexFormat PositionColor; 
+        static const VertexFormat PositionTexture; 
         static const VertexFormat PositionTextureColor; 
 
         VertexFormat() = default; 

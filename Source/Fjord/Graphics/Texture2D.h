@@ -1,12 +1,13 @@
 #pragma once 
 
 #include "Fjord/Common.h" 
+#include "Fjord/Graphics/Texture.h" 
 #include "Fjord/Graphics/Types.h" 
 
 namespace Fjord 
 {
 
-    class Texture2D : public GPUObject 
+    class Texture2D : public Texture  
     {
     public: 
         static Texture2D* Load(const String& file); 
@@ -15,6 +16,8 @@ namespace Fjord
         virtual ~Texture2D(); 
 
         void Update(); 
+
+        virtual TextureType GetType() const override { return TextureType::Texture2D; } 
 
         unsigned GetWidth() const { return Width_; } 
         unsigned GetHeight() const { return Height_; } 

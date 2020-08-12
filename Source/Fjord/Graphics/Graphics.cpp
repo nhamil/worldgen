@@ -63,10 +63,14 @@ namespace Fjord
 
     void Graphics::BeginFrame() 
     {
+        SetShader(nullptr); 
+        SetGeometry(nullptr); 
+        SetRenderTarget(nullptr); 
+        ClearTextures(); 
         SetClearColor(Color::Black); 
         Clear(true, true); 
         ResetViewport(); 
-        ResetClip(); 
+        // ResetClip(); 
     }
 
     void Graphics::EndFrame() 
@@ -74,12 +78,22 @@ namespace Fjord
 
     }
 
-    int Graphics::GetWidth() 
+    unsigned Graphics::GetWidth() 
+    {
+        return CurRenderTarget_ ? CurRenderTarget_->GetWidth() : (unsigned) GetWindow()->GetWidth(); 
+    }
+
+    unsigned Graphics::GetHeight() 
+    {
+        return CurRenderTarget_ ? CurRenderTarget_->GetHeight() : (unsigned) GetWindow()->GetHeight(); 
+    }
+
+    unsigned Graphics::GetScreenWidth() 
     {
         return GetWindow()->GetWidth(); 
     }
 
-    int Graphics::GetHeight() 
+    unsigned Graphics::GetScreenHeight() 
     {
         return GetWindow()->GetHeight(); 
     }
@@ -91,9 +105,6 @@ namespace Fjord
 
     void Graphics::SetViewport(int x, int y, int w, int h) 
     {
-        auto* window = GetWindow(); 
-
-        FJ_EFWARN("SetViewport: (0,0) should be top left"); 
         GLCALL(glViewport(x, y, w, h)); 
     }
 
@@ -102,20 +113,20 @@ namespace Fjord
         GLCALL(glViewport(0, 0, GetWidth(), GetHeight())); 
     }
 
-    void Graphics::SetClip(int x, int y, int w, int h) 
-    {
-        auto* window = GetWindow(); 
-        // GLCALL(glEnable(GL_SCISSOR_TEST)); 
+    // void Graphics::SetClip(int x, int y, int w, int h) 
+    // {
+    //     auto* window = GetWindow(); 
+    //     // GLCALL(glEnable(GL_SCISSOR_TEST)); 
 
-        // GLCALL(glScissor(x, window->GetHeight() - y - h, w, h)); 
-    }
+    //     // GLCALL(glScissor(x, window->GetHeight() - y - h, w, h)); 
+    // }
 
-    void Graphics::ResetClip() 
-    {
-        auto* window = GetWindow(); 
-        // GLCALL(glDisable(GL_SCISSOR_TEST)); 
-        // GLCALL(glScissor(0, 0, window->GetWidth(), window->GetHeight())); 
-    }
+    // void Graphics::ResetClip() 
+    // {
+    //     auto* window = GetWindow(); 
+    //     // GLCALL(glDisable(GL_SCISSOR_TEST)); 
+    //     // GLCALL(glScissor(0, 0, window->GetWidth(), window->GetHeight())); 
+    // }
 
     void Graphics::ClearTextures() 
     {
@@ -125,7 +136,7 @@ namespace Fjord
         }
     }
 
-    void Graphics::SetTexture(unsigned index, Texture2D* tex) 
+    void Graphics::SetTexture(unsigned index, Texture* tex) 
     {
         FJ_EASSERT(index < MaxTextureCount); 
 
@@ -140,6 +151,16 @@ namespace Fjord
     void Graphics::SetGeometry(Geometry* geom) 
     {
         CurGeom_ = geom; 
+    }
+
+    void Graphics::SetRenderTarget(RenderTarget* target) 
+    {
+        if (target && !target->IsValid()) 
+        {
+            FJ_EFWARN("Attempted to set invalid render target"); 
+            target = nullptr; 
+        }
+        CurRenderTarget_ = target; 
     }
 
     void Graphics::SetDepthTest(bool enabled) 
@@ -187,6 +208,8 @@ namespace Fjord
 
     void Graphics::Clear(bool color, bool depth) 
     {
+        PrepareRenderTarget(); 
+
         GLuint bits = 0; 
         if (color) bits |= GL_COLOR_BUFFER_BIT; 
         if (depth) bits |= GL_DEPTH_BUFFER_BIT; 
@@ -200,13 +223,7 @@ namespace Fjord
     {
         FJ_EASSERT(CurShader_ && CurGeom_ && CurGeom_->HasUsableVertexBuffer()); 
 
-        CurShader_->Update(); 
-        CurGeom_->Update(); 
-
-        // GLCALL(glUseProgram(CurShader_->GetHandle())); 
-        // GLCALL(glBindVertexArray(CurGeom_->GetHandle())); 
-        API_->BindShader(CurShader_->GetHandle()); 
-        API_->BindVertexArray(CurGeom_->GetHandle()); 
+        PrepareDraw(); 
 
         GLCALL(glDrawArrays(
             GetGLPrimitive(prim), 
@@ -219,11 +236,34 @@ namespace Fjord
     {
         FJ_EASSERT(CurShader_ && CurGeom_ && CurGeom_->HasUsableVertexBuffer() && CurGeom_->GetIndexBuffer()); 
 
+        PrepareDraw(); 
+
+        GLCALL(glDrawElements(
+            GetGLPrimitive(prim), 
+            numInds, 
+            GL_UNSIGNED_INT, 
+            (void*) (startInd * sizeof(uint32)) 
+        )); 
+    }
+
+    void Graphics::PrepareRenderTarget() 
+    {
+        GPUHandle fbo = 0; 
+        if (CurRenderTarget_) 
+        {
+            CurRenderTarget_->Update(); 
+            fbo = CurRenderTarget_->GetHandle(); 
+        }
+        API_->BindFramebuffer(fbo, fbo); 
+    }
+
+    void Graphics::PrepareDraw() 
+    {
+        PrepareRenderTarget(); 
+
         CurShader_->Update(); 
         CurGeom_->Update(); 
-
-        IndexBuffer* ib = CurGeom_->GetIndexBuffer(); 
-
+        
         for (unsigned i = 0; i < MaxTextureCount; i++) 
         {
             // GLCALL(glActiveTexture(GL_TEXTURE0 + i)); 
@@ -239,18 +279,8 @@ namespace Fjord
             }
         }
 
-        // GLCALL(glUseProgram(CurShader_->GetHandle())); 
-        // GLCALL(glBindVertexArray(CurGeom_->GetHandle())); 
-        // GLCALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->GetHandle())); 
         API_->BindShader(CurShader_->GetHandle()); 
         API_->BindVertexArray(CurGeom_->GetHandle()); 
-
-        GLCALL(glDrawElements(
-            GetGLPrimitive(prim), 
-            numInds, 
-            GL_UNSIGNED_INT, 
-            (void*) (startInd * sizeof(uint32)) 
-        )); 
     }
 
 }

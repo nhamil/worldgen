@@ -38,8 +38,12 @@ set(SOURCES
     ${FJORD_SOURCE_FOLDER}/Graphics/Mesh.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/OpenGL.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Parameter.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/PostProcess.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Renderer.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/RenderSystems.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/RenderTarget.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/RenderTargetSwap.cpp 
+    ${FJORD_SOURCE_FOLDER}/Graphics/RenderTexture.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Shader.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/SpriteBatch.cpp 
     ${FJORD_SOURCE_FOLDER}/Graphics/Texture2D.cpp 

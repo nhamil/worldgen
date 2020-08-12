@@ -1,5 +1,9 @@
 #pragma once 
 
+#include "Fjord/Graphics/Geometry.h" 
+#include "Fjord/Graphics/RenderTarget.h" 
+#include "Fjord/Graphics/Shader.h" 
+#include "Fjord/Graphics/Texture.h" 
 #include "Fjord/Graphics/Types.h" 
 
 namespace Fjord 
@@ -22,14 +26,17 @@ namespace Fjord
         void SetState(GraphicsState state); 
 
         void ClearTextures(); 
-        void SetTexture(unsigned index, Texture2D* texture); 
+        void SetTexture(unsigned index, Texture* texture); 
         void SetShader(Shader* shader); 
         void SetGeometry(Geometry* geom); 
+        void SetRenderTarget(RenderTarget* target); 
 
         void SetDepthTest(bool enabled); 
 
-        int GetWidth(); 
-        int GetHeight(); 
+        unsigned GetWidth(); 
+        unsigned GetHeight(); 
+        unsigned GetScreenWidth(); 
+        unsigned GetScreenHeight(); 
         float GetAspectRatio(); 
 
         void ResetViewport(); 
@@ -53,11 +60,15 @@ namespace Fjord
         GraphicsAPI* GetAPI() { return API_; } 
 
     private: 
+        void PrepareRenderTarget(); 
+        void PrepareDraw(); 
+
         GraphicsAPI* API_; 
 
         Ref<Shader> CurShader_; 
         Ref<Geometry> CurGeom_; 
-        Ref<Texture2D> CurTextures_[MaxTextureCount];
+        Ref<Texture> CurTextures_[MaxTextureCount];
+        Ref<RenderTarget> CurRenderTarget_; 
     };
 
 }

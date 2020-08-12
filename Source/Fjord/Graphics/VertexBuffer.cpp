@@ -12,6 +12,7 @@ namespace Fjord
     const VertexFormat VertexFormat::Color0 = VertexFormat().Add(Attribute::Color0); 
     const VertexFormat VertexFormat::Texture0 = VertexFormat().Add(Attribute::Texture0); 
     const VertexFormat VertexFormat::PositionColor = VertexFormat().Add(Attribute::Position).Add(Attribute::Color0); 
+    const VertexFormat VertexFormat::PositionTexture = VertexFormat().Add(Attribute::Position).Add(Attribute::Texture0); 
     const VertexFormat VertexFormat::PositionTextureColor = VertexFormat().Add(Attribute::Position).Add(Attribute::Texture0).Add(Attribute::Color0); 
 
     VertexBuffer::VertexBuffer(const VertexFormat& format, unsigned numElements)  

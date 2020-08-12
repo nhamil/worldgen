@@ -93,7 +93,6 @@ void WorldGenSystem::UpdateGUI()
     if (UI::Button("Quit")) Fjord::Stop(); 
     UI::EndWindow(); 
 
-    int i = 0; 
     for (Entity e : GetEntities()) 
     {
         Planet& planet = scene->GetComponent<Planet>(e); 

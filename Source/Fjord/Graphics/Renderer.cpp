@@ -2,34 +2,31 @@
 
 #include "Fjord/Graphics/Color.h" 
 #include "Fjord/Graphics/Graphics.h" 
+#include "Fjord/Graphics/Texture2D.h" 
+#include "Fjord/Graphics/VertexBuffer.h" 
+
+// TODO remove 
+#include "Fjord/Graphics/OpenGL.h" 
 
 #include <sstream> 
 
 namespace Fjord 
 {
 
-    void PrintMatrix(const String& name, const Matrix4& m) 
-    {
-        FJ_EFDEBUG("Matrix: %s", name.c_str()); 
-        for (int y = 0; y < 4; y++) 
-        {
-            FJ_EFDEBUG("%0.2f, %0.2f, %0.2f, %0.2f", 
-                m[y*4+0], 
-                m[y*4+1], 
-                m[y*4+2], 
-                m[y*4+3] 
-            );
-        }
-    }
-
     Renderer::Renderer() 
     {
-
+        RTSwap_ = new RenderTargetSwap(); 
+        PPPipeline_ = new PostProcessPipeline(); 
     }
 
     Renderer::~Renderer() 
     {
 
+    }
+
+    PostProcessPipeline* Renderer::GetPostProcessPipeline() 
+    {
+        return PPPipeline_; 
     }
 
     void Renderer::SetAmbientColor(const Color& color) 
@@ -50,6 +47,8 @@ namespace Fjord
         // graphics->SetBlendMode(BlendMode::One, BlendMode::One); 
         graphics->SetBlendMode(BlendMode::One, BlendMode::Zero); 
         graphics->SetDepthTest(true); 
+
+        RTSwap_->SetSize(graphics->GetScreenWidth(), graphics->GetScreenHeight()); 
     }
 
     void Renderer::EndFrame() 
@@ -59,6 +58,13 @@ namespace Fjord
         auto* graphics = GetGraphics(); 
         graphics->SetDepthTest(true); 
 
+        // GLCALL(glBindFramebuffer(GL_FRAMEBUFFER, RenderTarget_->GetHandle())); 
+        // graphics->GetAPI()->BindFramebuffer(RenderTarget_->GetHandle(), RenderTarget_->GetHandle()); 
+        graphics->SetClearColor(Color(0, 0, 0)); 
+        RTSwap_->Clear(); 
+        graphics->SetRenderTarget(RTSwap_->GetDest()); 
+        graphics->ResetViewport(); 
+        
         for (CameraRenderData& cam : Cameras_) 
         {
             Matrix4 camTfm = cam.Transform; 
@@ -118,7 +124,17 @@ namespace Fjord
             }
         }
 
-        graphics->SetBlendMode(BlendMode::SourceAlpha, BlendMode::OneMinusSourceAlpha); 
+        RTSwap_->Swap(); 
+        PPPipeline_->Apply(RTSwap_); 
+        RTSwap_->ApplyEffect(RTSwap_->GetSource(), nullptr, nullptr); 
+
+        // graphics->SetRenderTarget(nullptr); 
+        // graphics->ResetViewport(); 
+        // graphics->SetBlendMode(BlendMode::SourceAlpha, BlendMode::OneMinusSourceAlpha); 
+        // graphics->SetGeometry(Quad_); 
+        // graphics->SetShader(QuadShader_); 
+        // graphics->SetTexture(0, RenderTarget_->GetColorBuffer(0)); 
+        // graphics->Draw(Primitive::Triangles, 0, 6); 
     }
 
     void Renderer::AddCamera(Camera* cam, const Matrix4& tfm) 

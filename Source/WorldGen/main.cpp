@@ -14,8 +14,11 @@
 #include <Fjord/Graphics/Material.h> 
 #include <Fjord/Graphics/Mesh.h> 
 #include <Fjord/Graphics/MeshContainer.h> 
+#include <Fjord/Graphics/PostProcess.h> 
 #include <Fjord/Graphics/Renderer.h> 
 #include <Fjord/Graphics/RenderSystems.h> 
+#include <Fjord/Graphics/RenderTarget.h> 
+#include <Fjord/Graphics/RenderTexture.h> 
 #include <Fjord/Graphics/Shader.h> 
 #include <Fjord/Graphics/SpriteBatch.h> 
 #include <Fjord/Graphics/Texture2D.h> 
@@ -40,14 +43,6 @@
 
 using namespace Fjord; 
 using namespace std; 
-
-class Main : public Application 
-{
-public: 
-    virtual void Init() override; 
-    virtual void PreUpdate(float dt) override; 
-    virtual void PreRender() override; 
-}; 
 
 class FPSCamera : public Component 
 {
@@ -184,7 +179,7 @@ public:
 
             if (scene->IsEntityValid(orbit.Orbits)) 
             {
-                if (auto* orbitTfm = scene->TryGetComponent<Transform>(orbit.Orbits)) 
+                if (scene->TryGetComponent<Transform>(orbit.Orbits)) 
                 {
                     Quaternion rot = Quaternion::AxisAngle(Vector3::Up, orbit.Angle); 
                     Vector3 pos = rot * Vector3::Forward * orbit.Distance; 
@@ -204,9 +199,23 @@ public:
     };
 };
 
+class Main : public Application 
+{
+public: 
+    virtual void Init() override; 
+    virtual void PreUpdate(float dt) override; 
+    virtual void PreRender() override; 
+    virtual void PostRender() override; 
+
+    Ref<RenderTarget> RT; 
+}; 
+
 void Main::Init() 
 {
     auto* scene = GetScene(); 
+
+    auto* pipeline = GetRenderer()->GetPostProcessPipeline(); 
+    pipeline->AddEffect<BloomEffect>()->SetThreshold(1); 
 
     Scene::RegisterComponent<FPSCamera>(); 
     Scene::RegisterComponent<RotateTag>(); 
@@ -224,10 +233,10 @@ void Main::Init()
 
     Material* lightMat = new Material(); 
     lightMat->SetShader(Shader::Load("Basic")); 
-    lightMat->SetVector4("fj_Emissive", {1.0, 1.0, 1.0, 1.0}); 
+    lightMat->SetVector4("fj_Emissive", {2.0, 2.0, 2.0, 1.0}); 
 
-    GetWindow()->SetVSync(true); 
-    GetWindow()->SetMode(WindowMode::Fullscreen); 
+    GetWindow()->SetVSync(false); 
+    // GetWindow()->SetMode(WindowMode::Fullscreen); 
 
     Entity planet; 
     {
@@ -235,16 +244,18 @@ void Main::Init()
         planet = scene->CreateEntity(); 
         scene->AddComponent<Planet>(planet); 
 
-        const int NumLights = 2; 
+        const int NumLights = 1; 
         for (int i = 0; i < NumLights; i++) 
         {
             Entity l = scene->CreateEntity(); 
 
+            scene->GetComponent<Transform>(l).SetScale(Vector3(2.0)); 
+
             auto& orbit = scene->AddComponent<OrbitTag>(l); 
             orbit.Angle = (float) i / NumLights * FJ_2_PI; 
             orbit.Orbits = planet; 
-            orbit.Distance = 25; 
-            orbit.Speed = 20 * FJ_TO_RAD; 
+            orbit.Distance = 125; 
+            orbit.Speed = 1 * FJ_TO_RAD; 
 
             auto& mc = scene->AddComponent<MeshContainer>(l); 
             mc.SetMesh(mesh); 
@@ -252,7 +263,7 @@ void Main::Init()
 
             auto& light = scene->AddComponent<Light>(l); 
             light.SetType(LightType::Point); 
-            light.SetColor(Color::White); 
+            light.SetColor(Vector4(Vector3(1.0) * 1, 1.0)); 
             light.SetRadius(100.0f); 
         }
     }
@@ -321,7 +332,12 @@ void Main::PreUpdate(float dt)
 
 void Main::PreRender() 
 {
-    GetRenderer()->SetAmbientColor({0.1, 0.1, 0.1}); 
+    GetRenderer()->SetAmbientColor(Vector4(Vector3(1) * 0.1, 1.0)); 
+}
+
+void Main::PostRender() 
+{
+
 }
 
 ENGINE_MAIN_CLASS(Main) 
