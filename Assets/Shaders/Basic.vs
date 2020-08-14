@@ -17,10 +17,12 @@ struct LightData
 in vec3 a_Position; 
 in vec3 a_Normal; 
 in vec4 a_Color0; 
+in vec2 a_Texture0; 
 
 out vec3 v_ViewPosition; 
 out vec3 v_ViewNormal; 
 out vec4 v_Color; 
+out vec2 v_Texture0; 
 
 uniform mat4 fj_Projection; 
 uniform mat4 fj_ModelView; 
@@ -28,6 +30,7 @@ uniform mat3 fj_NormalMatrix;
 
 void main() 
 {
+    v_Texture0 = a_Texture0; 
     v_ViewNormal = fj_NormalMatrix * a_Normal; 
     v_Color = a_Color0; 
 

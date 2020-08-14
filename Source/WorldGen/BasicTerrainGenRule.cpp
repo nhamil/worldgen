@@ -129,9 +129,9 @@ void BasicTerrainGenRule::Apply(World& world)
         float heat = 1 - std::fabs(position.Y); 
         float moisture = FractalNoise(position, 0.7, 0.5, 9, Seed_ * 1234) * 0.5 + 0.5; 
 
-        // world.SetHeight(cell, height); 
-        // world.SetHeat(cell, heat); 
-        // world.SetMoisture(cell, moisture); 
+        world.SetHeight(cell, height); 
+        world.SetHeat(cell, heat); 
+        world.SetMoisture(cell, moisture); 
 
         world.SetWindCurrent(cell, Quaternion::AxisAngle(position.Swizzle3("YZX"), 1 - height)); 
         world.SetOceanCurrent(cell, Quaternion::AxisAngle(position.Swizzle3("ZXY"), 1 - moisture)); 
@@ -146,7 +146,7 @@ void BasicTerrainGenRule::Apply(World& world)
             world.SetTerrain(cell, Terrain::Grassland); 
             land++; 
         }
-        else if (height > 0.54) 
+        else if (height > 0.55) 
         {
             world.SetTerrain(cell, Terrain::ShallowWater); 
             water++; 

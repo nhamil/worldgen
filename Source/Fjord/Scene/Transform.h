@@ -34,6 +34,11 @@ namespace Fjord
             Dirty_ = true; 
         }
 
+        void SetScale(float scale) 
+        {
+            SetScale(Vector3(scale)); 
+        }
+
         bool IsDirty() 
         {
             return Dirty_; 

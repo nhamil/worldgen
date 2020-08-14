@@ -10,12 +10,12 @@ void WorldGenerator::AddRule(WorldGenRule* rule)
     Rules_.push_back(rule); 
 }
 
-World WorldGenerator::Generate() 
+World* WorldGenerator::Generate() 
 {
-    World world; 
+    World* world = new World(); 
     for (auto ruleRef : Rules_) 
     {
-        ruleRef->Apply(world); 
+        ruleRef->Apply(*world); 
     }
     return world; 
 }

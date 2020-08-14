@@ -11,6 +11,7 @@
 #include "Fjord/Graphics/RenderTarget.h" 
 #include "Fjord/Graphics/RenderTargetSwap.h" 
 #include "Fjord/Graphics/Shader.h" 
+#include "Fjord/Graphics/Texture2D.h" 
 #include "Fjord/Math/Matrix3.h" 
 #include "Fjord/Math/Matrix4.h" 
 
@@ -58,6 +59,8 @@ namespace Fjord
         void DrawMesh(Mesh* mesh, Material* material, const Matrix4& transform); 
 
     private: 
+        static Ref<Texture2D> WhiteTexture_; 
+
         Ref<PostProcessPipeline> PPPipeline_; 
         Ref<RenderTargetSwap> RTSwap_; 
         Color AmbientColor_; 

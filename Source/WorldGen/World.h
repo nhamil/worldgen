@@ -7,6 +7,8 @@
 #include <Fjord/Math/Quaternion.h> 
 #include <Fjord/Util/KDTree.h> 
 
+#include <functional> 
+
 using namespace Fjord; 
 
 static const unsigned MaxCellNeighborCount = 8; 
@@ -59,7 +61,22 @@ struct Cell
     enum Terrain Terrain = Terrain::Invalid; 
 };
 
-class World 
+struct TriCellId 
+{
+    CellId A, B, C; 
+    Vector3 Coords; 
+
+    template <class T> 
+    T Interpolate(const std::function<T(CellId)>& func) 
+    {
+        const T& a = func(A); 
+        const T& b = func(B); 
+        const T& c = func(C); 
+        return TriLerp(a, b, c, Coords); 
+    }
+};
+
+class World : public RefCounted
 {
 public: 
     World(); 
@@ -70,6 +87,9 @@ public:
 
     CellId GetCellIdPyPosition(const Vector3& position); 
     CellId GetCellIdPyPosition(const Vector3& position) const; 
+
+    TriCellId GetTriCellIdPyPosition(const Vector3& position); 
+    TriCellId GetTriCellIdPyPosition(const Vector3& position) const; 
 
     unsigned GetConnectionCount() const; 
     bool HasConnection(CellId a, CellId b) const; 
@@ -94,6 +114,7 @@ public:
     CellId GetNeighbor(CellId id, unsigned index) const; 
 
     Vector<Vector3> GetBounds(CellId id) const; 
+    Vector<CellId> GetOrderedNeighbors(CellId id) const; 
 
     /* Cell Set Properties */ 
 

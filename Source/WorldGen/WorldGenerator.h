@@ -103,7 +103,7 @@ public:
 
     void AddRule(WorldGenRule* rule); 
 
-    World Generate(); 
+    World* Generate(); 
 
 private: 
     Vector<WorldGenRule*> Rules_; 

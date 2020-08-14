@@ -13,8 +13,18 @@
 namespace Fjord 
 {
 
+    Ref<Texture2D> Renderer::WhiteTexture_ = nullptr; 
+
     Renderer::Renderer() 
     {
+        if (!WhiteTexture_) 
+        {
+            WhiteTexture_ = new Texture2D(1, 1, TextureFormat::RGBA8); 
+            uint32 data[] = { 0xFFFFFFFF }; 
+            WhiteTexture_->SetData(data); 
+            WhiteTexture_->Update(); 
+        }
+
         RTSwap_ = new RenderTargetSwap(); 
         PPPipeline_ = new PostProcessPipeline(); 
     }
@@ -60,11 +70,19 @@ namespace Fjord
 
         // GLCALL(glBindFramebuffer(GL_FRAMEBUFFER, RenderTarget_->GetHandle())); 
         // graphics->GetAPI()->BindFramebuffer(RenderTarget_->GetHandle(), RenderTarget_->GetHandle()); 
-        graphics->SetClearColor(Color(0, 0, 0)); 
+        graphics->SetClearColor(Color(0.6, 0.8, 1.0)); 
+        // graphics->SetClearColor(Color(0, 0, 0)); 
         RTSwap_->Clear(); 
         graphics->SetRenderTarget(RTSwap_->GetDest()); 
         graphics->ResetViewport(); 
+
+        ShaderInfo shaderInfo; 
+        shaderInfo.ReservedTextureUnits["fj_MainTex"] = 0; 
+        shaderInfo.AvailableTextureUnit = 1; 
         
+        // GLCALL(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)); 
+        GLCALL(glEnable(GL_CULL_FACE)); 
+
         for (CameraRenderData& cam : Cameras_) 
         {
             Matrix4 camTfm = cam.Transform; 
@@ -90,7 +108,19 @@ namespace Fjord
                     Matrix4 modelView = cam.Transform * instance.Transform; 
                     Matrix3 normalMat = Matrix3(Transpose(Inverse(modelView))); 
 
-                    mat->ApplyParameters(); 
+                    shader->SetTextureUnit("fj_MainTex", 0); 
+                    graphics->SetTexture(0, WhiteTexture_); 
+
+                    for (auto it : shaderInfo.ReservedTextureUnits) 
+                    {
+                        shader->SetTextureUnit(it.first, it.second); 
+                        Texture* tex = mat->GetTexture(it.first); 
+                        if (!tex) tex = WhiteTexture_; 
+                        graphics->SetTexture(it.second, tex); 
+                    }
+
+                    mat->ApplyParameters(shaderInfo); 
+
                     shader->SetMatrix4("fj_Projection", cam.Projection); 
                     shader->SetMatrix4("fj_ModelView", modelView); 
                     shader->SetMatrix3("fj_NormalMatrix", normalMat); 
@@ -124,6 +154,9 @@ namespace Fjord
                 first = false; 
             }
         }
+
+        GLCALL(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)); 
+        GLCALL(glDisable(GL_CULL_FACE)); 
 
         RTSwap_->Swap(); 
         PPPipeline_->Apply(RTSwap_); 

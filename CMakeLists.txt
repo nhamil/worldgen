@@ -11,9 +11,14 @@ include_directories(Source)
 # source files 
 set(SOURCES 
     ${WORLDGEN_SOURCE_FOLDER}/main.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/Components.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/World.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/WorldGenerator.cpp 
-    ${WORLDGEN_SOURCE_FOLDER}/WorldGenSystem.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/WorldGenThread.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/LOD/FaceNode.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/LOD/FaceNodeQueue.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/Systems/LODSystem.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/Systems/WorldGenSystem.cpp 
 
     ${WORLDGEN_SOURCE_FOLDER}/ClimateSimulationRule.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/BasicTerrainGenRule.cpp 

@@ -17,16 +17,19 @@ struct LightData
 in vec3 v_ViewPosition; 
 in vec3 v_ViewNormal; 
 in vec4 v_Color; 
+in vec2 v_Texture0; 
 
 out vec4 f_Color; 
 
 uniform LightData fj_LightData; 
 uniform vec4 fj_Emissive; 
 
+uniform sampler2D fj_MainTex; 
+
 void main() 
 {
     vec3 N = normalize(v_ViewNormal); 
-    vec3 E = vec3(0.0, 0.0, 1.0); // view direction
+    vec3 E = normalize(-v_ViewPosition); //vec3(0.0, 0.0, 1.0); // view direction
     vec3 L; // light direction
     vec3 H; // half
 
@@ -45,21 +48,20 @@ void main()
         atten = 1.0 / (1.0 + len*len); 
     }
 
-    H = normalize(N + L); 
+    H = normalize(E + normalize(L)); 
 
     float diffuseAmt = max(dot(N, L), 0.0); 
     vec3 diffuse = diffuseAmt * fj_LightData.Color.rgb; 
 
     float specAmt = 0.0; 
     // if (diffuseAmt > 0.0) 
-    // {
-    //     specAmt = pow(max(dot(H, E), 0.0), 32.0); 
-    // }
-    vec3 spec = specAmt * fj_LightData.Color.rgb; 
-
-    vec3 lighting = diffuse + spec; 
+    if (v_Color.r < 0.01)
+    {
+        specAmt = pow(max(dot(H, N), 0.0), 64.0); 
+    }
+    vec3 spec = specAmt * vec3(1);// * fj_LightData.Color.rgb; 
 
     // f_Color = v_Color;
-    f_Color.rgb = fj_Emissive.rgb + v_Color.rgb * atten * (lighting + fj_LightData.Ambient.rgb); 
+    f_Color.rgb = fj_Emissive.rgb + texture(fj_MainTex, v_Texture0).rgb * v_Color.rgb * atten * (diffuse + fj_LightData.Ambient.rgb) + spec; 
     f_Color.a = v_Color.a; 
 }

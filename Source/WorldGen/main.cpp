@@ -37,34 +37,14 @@
 
 #include "WorldGen/World.h" 
 #include "WorldGen/WorldGenerator.h" 
-#include "WorldGen/WorldGenSystem.h" 
+#include "WorldGen/Components.h" 
+#include "WorldGen/Systems/LODSystem.h" 
+#include "WorldGen/Systems/WorldGenSystem.h" 
 
 #include <iostream> 
 
 using namespace Fjord; 
 using namespace std; 
-
-class FPSCamera : public Component 
-{
-public: 
-    float RotX = 0.0f; // up-down 
-    float RotY = 0.0f; // left-right 
-}; 
-
-class RotateTag : public Component 
-{
-public: 
-    float Amount = 1.0f;  
-}; 
-
-class OrbitTag : public Component 
-{
-public: 
-    Entity Orbits = Scene::NullEntity; 
-    float Distance = 10.0f; 
-    float Angle = 0.0f; 
-    float Speed = 10.0f; 
-};
 
 class FPSCameraSystem : public EntitySystem 
 {
@@ -163,7 +143,7 @@ public:
     OrbitSystem()
     {
         IncludeComponent<Transform>(); 
-        IncludeComponent<OrbitTag>(); 
+        IncludeComponent<Orbit>(); 
     }
 
     virtual void Update(float dt) override 
@@ -172,7 +152,7 @@ public:
 
         for (Entity e : GetEntities()) 
         {
-            auto& orbit = scene->GetComponent<OrbitTag>(e); 
+            auto& orbit = scene->GetComponent<Orbit>(e); 
             auto& tfm = scene->GetComponent<Transform>(e); 
 
             orbit.Angle += orbit.Speed * dt; 
@@ -215,17 +195,19 @@ void Main::Init()
     auto* scene = GetScene(); 
 
     auto* pipeline = GetRenderer()->GetPostProcessPipeline(); 
-    pipeline->AddEffect<BloomEffect>()->SetThreshold(0.9); 
 
     Scene::RegisterComponent<FPSCamera>(); 
     Scene::RegisterComponent<RotateTag>(); 
     Scene::RegisterComponent<Planet>(); 
-    Scene::RegisterComponent<OrbitTag>(); 
+    Scene::RegisterComponent<Orbit>(); 
+    Scene::RegisterComponent<OrbitCamera>(); 
+    Scene::RegisterComponent<LODSphere>(); 
 
     scene->AddSystem(new FPSCameraSystem()); 
     scene->AddSystem(new RotateSystem()); 
     scene->AddSystem(new WorldGenSystem()); 
     scene->AddSystem(new OrbitSystem()); 
+    scene->AddSystem(new LODSystem()); 
 
     Mesh* mesh = Mesh::CreateCube(); 
     Material* mat = new Material(); 
@@ -233,29 +215,30 @@ void Main::Init()
 
     Material* lightMat = new Material(); 
     lightMat->SetShader(Shader::Load("Basic")); 
-    lightMat->SetVector4("fj_Emissive", {2.0, 2.0, 2.0, 1.0}); 
+    lightMat->SetVector4("fj_Emissive", {1.0, 1.0, 1.0, 1.0}); 
 
     GetWindow()->SetVSync(false); 
-    // GetWindow()->SetMode(WindowMode::Fullscreen); 
+    GetWindow()->SetMode(WindowMode::Windowed); 
 
     Entity planet; 
     {
         // create planet 
         planet = scene->CreateEntity(); 
         scene->AddComponent<Planet>(planet); 
+        scene->AddComponent<LODSphere>(planet); 
 
         const int NumLights = 1; 
         for (int i = 0; i < NumLights; i++) 
         {
             Entity l = scene->CreateEntity(); 
 
-            scene->GetComponent<Transform>(l).SetScale(Vector3(2.0)); 
+            scene->GetComponent<Transform>(l).SetScale(2.0); 
 
-            auto& orbit = scene->AddComponent<OrbitTag>(l); 
-            orbit.Angle = (float) i / NumLights * FJ_2_PI; 
+            auto& orbit = scene->AddComponent<Orbit>(l); 
+            orbit.Angle = (float) i / NumLights * FJ_2_PI + FJ_PI_2; 
             orbit.Orbits = planet; 
-            orbit.Distance = 125; 
-            orbit.Speed = 1 * FJ_TO_RAD; 
+            orbit.Distance = 50; 
+            orbit.Speed = 10 * FJ_TO_RAD; 
 
             auto& mc = scene->AddComponent<MeshContainer>(l); 
             mc.SetMesh(mesh); 
@@ -266,31 +249,6 @@ void Main::Init()
             light.SetColor(Vector4(Vector3(1.0) * 1, 1.0)); 
             light.SetRadius(100.0f); 
         }
-    }
-
-    Random r; 
-    float range = 300; 
-    for (int i = 0; i < 1000; i++)
-    {
-        // create cube 
-        Entity e = scene->CreateEntity(); 
-        auto& tfm = scene->GetComponent<Transform>(e); 
-        auto& mc = scene->AddComponent<MeshContainer>(e); 
-        auto& rot = scene->AddComponent<RotateTag>(e); 
-        mc.SetMesh(mesh); 
-        mc.SetMaterial(mat); 
-        tfm.SetPosition({
-            r.NextFloat() * range - range * 0.5f, 
-            r.NextFloat() * range - range * 0.5f, 
-            r.NextFloat() * range - range * 0.5f 
-        });
-        rot.Amount = r.NextFloat() * 1; 
-
-        auto& orbit = scene->AddComponent<OrbitTag>(e); 
-        orbit.Angle = r.NextFloat() * FJ_2_PI; 
-        orbit.Orbits = planet; 
-        orbit.Distance = r.NextFloat() * 1000 + 20; 
-        orbit.Speed = 400 / orbit.Distance * FJ_TO_RAD; 
     }
 
     {

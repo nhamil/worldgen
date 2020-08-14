@@ -75,7 +75,7 @@ namespace Fjord
             frames = GetTimeSeconds(); 
         }
 
-        // if (!g_Window->IsVSyncEnabled() || frames < GetTimeSeconds()) 
+        if (frames < GetTimeSeconds()) 
         {
             frames += skipFrames; 
             fps++; 
