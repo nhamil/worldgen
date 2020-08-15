@@ -36,6 +36,10 @@ namespace Fjord
         void SetMatrix3(const String& name, const Matrix3& value) { SetParameter(name, Parameter(value)); }  
         void SetMatrix4(const String& name, const Matrix4& value) { SetParameter(name, Parameter(value)); }  
 
+        RenderQueue GetRenderQueue() const { return Queue_; } 
+
+        void SetRenderQueue(RenderQueue queue) { Queue_ = queue; } 
+
         const Parameter* GetParameter(const String& name) const 
         {
             auto it = Parameters_.find(name); 
@@ -66,6 +70,7 @@ namespace Fjord
         HashMap<String, Ref<Texture>> Textures_; 
         HashMap<String, Parameter> Parameters_; 
         Ref<Shader> Shader_; 
+        RenderQueue Queue_ = RenderQueue::Opaque; 
     };
 
 }

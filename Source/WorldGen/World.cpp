@@ -7,11 +7,11 @@ Color GetTerrainColor(Terrain t)
 {
     switch (t) 
     {
-    case Terrain::DeepWater: return {0, 0, 0.7}; 
-    case Terrain::ShallowWater: return {0.0, 0.3, 0.7}; 
-    case Terrain::Grassland: return {0.25, 0.7, 0.1}; 
+    case Terrain::DeepWater: return {0, 0.0, 0.5}; 
+    case Terrain::ShallowWater: return {0.0, 0.1, 0.5}; 
+    case Terrain::Grassland: return {0.3, 0.6, 0.0}; 
     case Terrain::Desert: return {0.7, 0.7, 0.3}; 
-    case Terrain::Forest: return {0, 0.5, 0}; 
+    case Terrain::Forest: return {0.2, 0.45, 0}; 
     case Terrain::Rainforest: return {0, 0.25, 0}; 
     case Terrain::Tundra: return {0.5, 0.5, 0.2}; 
     case Terrain::Snow: return {0.95, 0.9, 0.95}; 

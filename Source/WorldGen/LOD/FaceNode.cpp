@@ -109,11 +109,33 @@ bool FaceNode::HasChildren() const
     return false; 
 }
 
-void FaceNode::Update(const Vector3& camPosition) 
+int FaceNode::Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode*>& childQueue) 
 {
     Vector3 center = Center_; 
 
     const float BaseDist = 180.0; 
+
+    int meshesBuilt = 0; 
+
+    if (buildMesh) 
+    {
+        if (Lock_.TryLock()) 
+        {
+            if (MeshDataReady_) 
+            {
+                Mat_ = new Material(); 
+                Mat_->SetShader(s_Material->GetShader()); 
+
+                Mesh_ = new Mesh(); 
+                MeshData_->Apply(Mesh_); 
+                Mesh_->CalculateNormals(); 
+                MeshData_ = nullptr; 
+                MeshDataReady_ = false; 
+                meshesBuilt++; 
+            }
+            Lock_.Unlock(); 
+        }
+    }
 
     // float dist = Length(camPosition - center); 
     float dist = Angle(camPosition, center) * FJ_TO_DEG; 
@@ -145,7 +167,8 @@ void FaceNode::Update(const Vector3& camPosition)
     {
         if (Children_[i]) 
         {
-            Children_[i]->Update(camPosition); 
+            // meshesAllowed -= Children_[i]->Update(camPosition, meshesAllowed); 
+            childQueue.push_back(Children_[i]); 
             CloseEnough_ |= Children_[i]->CloseEnough_; 
         }
     }
@@ -176,6 +199,8 @@ void FaceNode::Update(const Vector3& camPosition)
         NodeQueue_->Add(this); 
         Requested_ = true; 
     }
+
+    return meshesBuilt; 
 }
 
 void FaceNode::Render(Transform& tfm) 
@@ -207,7 +232,7 @@ void FaceNode::Render(Transform& tfm)
         if (render) 
         {
             GetRenderer()->DrawMesh(Mesh_, Mat_, tfm.GetMatrix()); 
-            GetRenderer()->DrawMesh(WaterMesh_, WaterMat_, tfm.GetMatrix()); 
+            // GetRenderer()->DrawMesh(WaterMesh_, WaterMat_, tfm.GetMatrix()); 
         }
         else 
         {
@@ -225,17 +250,32 @@ void FaceNode::Generate()
     static const unsigned VertexSize = Resolution * Resolution; 
     static const unsigned IndexSize = (Resolution-1) * (Resolution-1) * 6; 
 
-    Vector<Vector3> verts(VertexSize); 
-    Vector<Vector4> colors(VertexSize); 
-    Vector<Vector2> texCoords(VertexSize); 
-    Vector<Vector3> normals(VertexSize); 
-    Vector<uint32> inds(IndexSize); 
+    MutexLock lock(Lock_); 
 
-    Vector<Vector3> wverts(VertexSize); 
-    Vector<Vector4> wcolors(VertexSize); 
-    Vector<Vector2> wtexCoords(VertexSize); 
-    Vector<Vector3> wnormals(VertexSize); 
-    Vector<uint32> winds(IndexSize); 
+    MeshData_ = new MeshData(); 
+    auto& verts = MeshData_->Vertices; 
+    auto& normals = MeshData_->Normals; 
+    auto& colors = MeshData_->Colors; 
+    auto& texCoords = MeshData_->TexCoords; 
+    auto& inds = MeshData_->Indices; 
+
+    verts.resize(VertexSize); 
+    normals.resize(VertexSize); 
+    colors.resize(VertexSize); 
+    texCoords.resize(VertexSize); 
+    inds.resize(IndexSize); 
+
+    // Vector<Vector3> verts(VertexSize); 
+    // Vector<Vector4> colors(VertexSize); 
+    // Vector<Vector2> texCoords(VertexSize); 
+    // Vector<Vector3> normals(VertexSize); 
+    // Vector<uint32> inds(IndexSize); 
+
+    // Vector<Vector3> wverts(VertexSize); 
+    // Vector<Vector4> wcolors(VertexSize); 
+    // Vector<Vector2> wtexCoords(VertexSize); 
+    // Vector<Vector3> wnormals(VertexSize); 
+    // Vector<uint32> winds(IndexSize); 
 
     int anomalies = 0; 
 
@@ -258,61 +298,49 @@ void FaceNode::Generate()
         TriCellId tri = World_->GetTriCellIdPyPosition(pos); 
         tri.Coords = Smooth(tri.Coords); 
         tri.Coords *= 1.0 / (tri.Coords.X + tri.Coords.Y + tri.Coords.Z); 
+        // tri.Coords = Vector3(1.0, 0.0, 0.0); 
         CellId cell = tri.A; 
 
         // float height = World_->GetHeight(cell); 
-        float height = tri.Interpolate<float>([&](CellId id) { return World_->GetHeight(id); }); 
+        float height = tri.Interpolate<float>([&](CellId id) 
+        { 
+            return 1.0 + Max(0.0f, World_->GetHeight(id) - 0.57f) * 0.01; 
+        }); 
 
-        bool taller = false; 
-        if (World_->GetHeight(cCell) > height) taller = true; 
-        for (unsigned j = 0; j < World_->GetNeighborCount(cCell); j++) 
-        {
-            if (World_->GetHeight(World_->GetNeighbor(cCell, j)) > height) 
-            {
-                taller = true; 
-                break; 
-            }
-        }
-        if (!taller) 
-        {
-            // Vector3 a = World_->GetPosition(tri.A); 
-            // Vector3 b = World_->GetPosition(tri.B); 
-            // Vector3 c = World_->GetPosition(tri.C); 
-            // Vector3 p = pos; 
-            // FJ_FDEBUG("Anomaly! %f %f %f \n%f %f %f \n%f %f %f \n%f %f %f \n%f %f %f \n", 
-            //     tri.Coords.X, tri.Coords.Y, tri.Coords.Z, 
-            //     a.X, a.Y, a.Z, 
-            //     b.X, b.Y, b.Z, 
-            //     c.X, c.Y, c.Z, 
-            //     p.X, p.Y, p.Z); 
-            anomalies++; 
-        }
-
-        height = 1.0 + (height - 0.57f) * 0.05; 
+        // height = 1.0 + (height - 0.57f) * 0.15; 
 
         Terrain terrain = World_->GetTerrain(cell); 
 
-        Color landTerrain = GetTerrainColor(terrain); 
-        if (IsTerrainWater(terrain)) 
-        {
-            landTerrain = GetTerrainColor(Terrain::Desert); 
-        }
+        Color landTerrain = tri.Interpolate<Vector4>([&](CellId id) -> Vector4 {
+            Terrain t = World_->GetTerrain(id); 
+            Color colors[] = {
+                GetTerrainColor(Terrain::Desert), 
+                GetTerrainColor(t)
+            };
+            return GetTerrainColor(t);//colors[IsTerrainLand(t)]; 
+        });
 
-        Color waterTerrain = GetTerrainColor(terrain); 
-        if (IsTerrainLand(terrain)) 
-        {
-            waterTerrain = GetTerrainColor(Terrain::ShallowWater); 
-        }
+        // Color waterTerrain = tri.Interpolate<Vector4>([&](CellId id) -> Vector4 {
+        //     Terrain t = World_->GetTerrain(id); 
+        //     Color colors[] = {
+        //         GetTerrainColor(Terrain::ShallowWater), 
+        //         GetTerrainColor(t)
+        //     };
+        //     return colors[IsTerrainWater(t)]; 
+        // });
+
+        // float height = 1.0; 
+        // Color landTerrain = Color::Black; 
 
         verts[i] = pos * height; 
         colors[i] = landTerrain; 
         normals[i] = pos; 
         texCoords[i] = {fx, fy}; 
 
-        wverts[i] = pos * 1.0; 
-        wcolors[i] = waterTerrain; 
-        wnormals[i] = pos; 
-        wtexCoords[i] = {fx, fy}; 
+        // wverts[i] = pos * 1.0; 
+        // wcolors[i] = waterTerrain; 
+        // wnormals[i] = pos; 
+        // wtexCoords[i] = {fx, fy}; 
     }
 
     // FJ_FDEBUG("Anomalies: %d", anomalies); 
@@ -335,34 +363,33 @@ void FaceNode::Generate()
             inds[i + 4] = v11; 
             inds[i + 5] = v10; 
 
-            winds[i + 0] = v00; 
-            winds[i + 1] = v01; 
-            winds[i + 2] = v11; 
-            winds[i + 3] = v00; 
-            winds[i + 4] = v11; 
-            winds[i + 5] = v10; 
+            // winds[i + 0] = v00; 
+            // winds[i + 1] = v01; 
+            // winds[i + 2] = v11; 
+            // winds[i + 3] = v00; 
+            // winds[i + 4] = v11; 
+            // winds[i + 5] = v10; 
         }
     }
 
-    Mat_ = new Material(); 
-    Mat_->SetShader(s_Material->GetShader()); 
-
-    WaterMat_ = new Material(); 
-    WaterMat_->SetShader(s_Material->GetShader()); 
+    // WaterMat_ = new Material(); 
+    // WaterMat_->SetShader(s_Material->GetShader()); 
     
-    Mesh_ = new Mesh(); 
-    Mesh_->SetVertices(verts); 
-    Mesh_->SetColors(colors); 
-    Mesh_->SetTexCoords(texCoords); 
-    Mesh_->SetIndices(inds); 
-    Mesh_->CalculateNormals(); 
-    Mesh_->Update(); 
+    // Mesh_ = new Mesh(); 
+    // Mesh_->SetVertices(verts); 
+    // Mesh_->SetColors(colors); 
+    // Mesh_->SetTexCoords(texCoords); 
+    // Mesh_->SetIndices(inds); 
+    // Mesh_->CalculateNormals(); 
+    // Mesh_->Update(); 
 
-    WaterMesh_ = new Mesh(); 
-    WaterMesh_->SetVertices(wverts); 
-    WaterMesh_->SetNormals(wnormals); 
-    WaterMesh_->SetColors(wcolors); 
-    WaterMesh_->SetTexCoords(wtexCoords); 
-    WaterMesh_->SetIndices(winds); 
-    WaterMesh_->Update(); 
+    // WaterMesh_ = new Mesh(); 
+    // WaterMesh_->SetVertices(wverts); 
+    // WaterMesh_->SetNormals(wnormals); 
+    // WaterMesh_->SetColors(wcolors); 
+    // WaterMesh_->SetTexCoords(wtexCoords); 
+    // WaterMesh_->SetIndices(winds); 
+    // WaterMesh_->Update(); 
+
+    MeshDataReady_ = true; 
 }

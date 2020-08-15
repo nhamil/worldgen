@@ -28,7 +28,7 @@ public:
     FaceNode(FaceNodeQueue* queue, World* world, FaceIndex face, unsigned lod, Vector3 tl, Vector3 tr, Vector3 bl, Vector3 br); 
     ~FaceNode(); 
 
-    void Update(const Vector3& camPosition); 
+    int Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode*>& childQueue); 
 
     void Render(Transform& tfm); 
 
@@ -67,4 +67,7 @@ private:
     Vector3 BottomLeft_; 
     Vector3 BottomRight_; 
     bool CloseEnough_ = false; 
+    Mutex Lock_; 
+    Ref<MeshData> MeshData_; 
+    bool MeshDataReady_ = false; 
 };

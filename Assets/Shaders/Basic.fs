@@ -29,7 +29,7 @@ uniform sampler2D fj_MainTex;
 void main() 
 {
     vec3 N = normalize(v_ViewNormal); 
-    vec3 E = normalize(-v_ViewPosition); //vec3(0.0, 0.0, 1.0); // view direction
+    vec3 E = normalize(-v_ViewPosition); // view direction
     vec3 L; // light direction
     vec3 H; // half
 
@@ -50,18 +50,18 @@ void main()
 
     H = normalize(E + normalize(L)); 
 
-    float diffuseAmt = max(dot(N, L), 0.0); 
+    float diffuseAmt = atten * max(dot(N, L), 0.0); 
     vec3 diffuse = diffuseAmt * fj_LightData.Color.rgb; 
 
     float specAmt = 0.0; 
     // if (diffuseAmt > 0.0) 
-    if (v_Color.r < 0.01)
+    if (v_Color.r < 0.2)
     {
-        specAmt = pow(max(dot(H, N), 0.0), 64.0); 
+        specAmt = (1.0 - v_Color.r / 0.2) * pow(max(dot(H, N), 0.0), 64.0); 
     }
-    vec3 spec = specAmt * vec3(1);// * fj_LightData.Color.rgb; 
+    vec3 spec = 0.5 * atten * specAmt * vec3(1);// * fj_LightData.Color.rgb; 
 
     // f_Color = v_Color;
-    f_Color.rgb = fj_Emissive.rgb + texture(fj_MainTex, v_Texture0).rgb * v_Color.rgb * atten * (diffuse + fj_LightData.Ambient.rgb) + spec; 
+    f_Color.rgb = fj_Emissive.rgb + texture(fj_MainTex, v_Texture0).rgb * v_Color.rgb * (diffuse + fj_LightData.Ambient.rgb) + spec; 
     f_Color.a = v_Color.a; 
 }

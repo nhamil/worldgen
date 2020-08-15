@@ -5,6 +5,9 @@
 static Ref<Material> s_AtmosMaterial; 
 static Ref<Mesh> s_AtmosMesh; 
 
+static const unsigned NumGenThreads = 8; 
+static Ref<FaceNodeGenThread> s_Threads[NumGenThreads]; 
+
 LODSystem::LODSystem() 
 {
     IncludeComponent<Transform>(); 
@@ -14,11 +17,19 @@ LODSystem::LODSystem()
     NodeQueue_ = new FaceNodeQueue(); 
     LastGen_ = GetTimeSeconds(); 
 
+    for (unsigned i = 0; i < NumGenThreads; i++) 
+    {
+        s_Threads[i] = new FaceNodeGenThread(NodeQueue_); 
+        s_Threads[i]->Start(); 
+    }
+
     if (!s_AtmosMaterial) 
     {
         s_AtmosMaterial = new Material(); 
-        s_AtmosMaterial->SetShader(Shader::Load("Basic")); 
+        s_AtmosMaterial->SetRenderQueue(RenderQueue::Translucent); 
+        s_AtmosMaterial->SetShader(Shader::Load("Atmosphere")); 
         s_AtmosMaterial->SetTexture("fj_MainTex", Texture2D::Load("TextImage")); 
+        s_AtmosMaterial->SetFloat("u_Radius", 1.06); 
     }
     if (!s_AtmosMesh) 
     {
@@ -32,11 +43,11 @@ LODSystem::LODSystem()
         {
             for (unsigned x = 0; x < Resolution; x++) 
             {
-                verts[x + y*Resolution] = GetPositionFromGeoCoords(GeoCoords{
+                verts[x + y*Resolution] = Normalized(GetPositionFromGeoCoords(GeoCoords{
                     (float) y / (Resolution-1) * 180 - 90, 
                     (float) x / (Resolution-1) * 360 - 180, 
-                }) * 1.1;
-                colors[x + y*Resolution] = Color{ 1.0, 1.0, 1.0, 1.0 }; 
+                }));
+                colors[x + y*Resolution] = Color{ 1.0, 1.0, 1.0, 0.5 }; 
             }
         }
 
@@ -47,11 +58,18 @@ LODSystem::LODSystem()
                 unsigned i = (x + y * (Resolution - 1)) * 6; 
 
                 inds[i + 0] = (x + 0) + (y + 0) * (Resolution); 
-                inds[i + 1] = (x + 0) + (y + 1) * (Resolution); 
+                inds[i + 1] = (x + 1) + (y + 0) * (Resolution); 
                 inds[i + 2] = (x + 1) + (y + 1) * (Resolution); 
                 inds[i + 3] = (x + 0) + (y + 0) * (Resolution); 
                 inds[i + 4] = (x + 1) + (y + 1) * (Resolution); 
-                inds[i + 5] = (x + 1) + (y + 0) * (Resolution); 
+                inds[i + 5] = (x + 0) + (y + 1) * (Resolution); 
+
+                // inds[i + 0] = (x + 0) + (y + 0) * (Resolution); 
+                // inds[i + 1] = (x + 0) + (y + 1) * (Resolution); 
+                // inds[i + 2] = (x + 1) + (y + 1) * (Resolution); 
+                // inds[i + 3] = (x + 0) + (y + 0) * (Resolution); 
+                // inds[i + 4] = (x + 1) + (y + 1) * (Resolution); 
+                // inds[i + 5] = (x + 1) + (y + 0) * (Resolution); 
             }
         }
 
@@ -72,6 +90,10 @@ void LODSystem::Update(float dt)
 
     Vector3 camPos = scene->GetComponent<Transform>(camEntity).GetPosition(); 
 
+    int meshesAllowed = 2; 
+
+    Vector<FaceNode*> faceNodes; 
+
     for (Entity e : GetEntities()) 
     {
         auto& planet = scene->GetComponent<Planet>(e); 
@@ -81,6 +103,7 @@ void LODSystem::Update(float dt)
         {
             if (planet.World) 
             {
+                planet.World->UpdateSpatialGeometry(); 
                 if (!lodSphere.Nodes[face] || planet.World != lodSphere.Nodes[face]->GetWorld()) 
                 {
                     lodSphere.Nodes[face] = new FaceNode(NodeQueue_, planet.World, (FaceIndex) face); 
@@ -88,7 +111,8 @@ void LODSystem::Update(float dt)
                 }
                 else 
                 {
-                    lodSphere.Nodes[face]->Update(camPos); 
+                    // meshesAllowed -= lodSphere.Nodes[face]->Update(camPos, meshesAllowed > 0, faceNodes); 
+                    faceNodes.push_back(lodSphere.Nodes[face]); 
                 }
             }
             else 
@@ -98,17 +122,24 @@ void LODSystem::Update(float dt)
         }
     }
 
-    if (GetTimeSeconds() - LastGen_ > 0.1) 
+    for (unsigned i = 0; i < faceNodes.size(); i++) 
     {
-        NodeQueue_->Sort(camPos); 
-        FaceNode* node = NodeQueue_->Poll(); 
-        if (node) 
-        {
-            // FJ_EFDEBUG("%u", node->GetLOD()); 
-            node->Generate(); 
-            LastGen_ = GetTimeSeconds(); 
-        }
+        meshesAllowed -= faceNodes[i]->Update(camPos, meshesAllowed > 0, faceNodes); 
     }
+
+    NodeQueue_->Sort(camPos); 
+
+    // if (GetTimeSeconds() - LastGen_ > 0.0) 
+    // {
+    //     NodeQueue_->Sort(camPos); 
+    //     FaceNode* node = NodeQueue_->Poll(); 
+    //     if (node) 
+    //     {
+    //         // FJ_EFDEBUG("%u", node->GetLOD()); 
+    //         node->Generate(); 
+    //         LastGen_ = GetTimeSeconds(); 
+    //     }
+    // }
 }
 
 void LODSystem::Render() 
@@ -122,11 +153,11 @@ void LODSystem::Render()
         auto& planet = scene->GetComponent<Planet>(e); 
         auto& lodSphere = scene->GetComponent<LODSphere>(e); 
 
-        // renderer->DrawMesh(
-        //     s_AtmosMesh, 
-        //     s_AtmosMaterial, 
-        //     tfm.GetMatrix()
-        // );
+        renderer->DrawMesh(
+            s_AtmosMesh, 
+            s_AtmosMaterial, 
+            tfm.GetMatrix()
+        );
 
         for (unsigned face = 0; face < FaceIndexCount; face++) 
         {

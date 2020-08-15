@@ -125,7 +125,7 @@ void BasicTerrainGenRule::Apply(World& world)
 
         float hNoise = FractalNoise(position, mul*2, 0.7, 9, Seed_) * 0.1; 
 
-        float height = FractalNoise(position, mul, 0.65, 9, Seed_) * 0.5 + 0.5; 
+        float height = FractalNoise(position, mul, 0.6, 9, Seed_) * 0.5 + 0.5; 
         float heat = 1 - std::fabs(position.Y); 
         float moisture = FractalNoise(position, 0.7, 0.5, 9, Seed_ * 1234) * 0.5 + 0.5; 
 
@@ -143,6 +143,34 @@ void BasicTerrainGenRule::Apply(World& world)
         }
         else if (height > 0.56) 
         {
+            // if (heat < 0.3) world.SetTerrain(cell, Terrain::Snow); 
+            // else if (heat < 0.3) world.SetTerrain(cell, Terrain::Tundra); 
+            // else if (heat < 0.5) 
+            // {
+            //     if (moisture < 0.5) world.SetTerrain(cell, Terrain::Snow); 
+            //     else world.SetTerrain(cell, Terrain::Forest); 
+            // }
+            // else if (heat < 0.6) 
+            // {
+            //     if (moisture < 0.2) world.SetTerrain(cell, Terrain::Desert); 
+            //     else if (moisture < 0.5) world.SetTerrain(cell, Terrain::Grassland); 
+            //     else world.SetTerrain(cell, Terrain::Forest); 
+            // }
+            // else if (heat < 0.75) 
+            // {
+            //     if (moisture < 0.2) world.SetTerrain(cell, Terrain::Desert); 
+            //     else if (moisture < 0.7) world.SetTerrain(cell, Terrain::Grassland); 
+            //     else if (moisture < 0.8) world.SetTerrain(cell, Terrain::Forest); 
+            //     else world.SetTerrain(cell, Terrain::Rainforest); 
+            // }
+            // else 
+            // {
+            //     if (moisture < 0.3) world.SetTerrain(cell, Terrain::Desert); 
+            //     else if (moisture < 0.5) world.SetTerrain(cell, Terrain::Grassland); 
+            //     else if (moisture < 0.7) world.SetTerrain(cell, Terrain::Forest); 
+            //     else world.SetTerrain(cell, Terrain::Rainforest); 
+            // }
+
             world.SetTerrain(cell, Terrain::Grassland); 
             land++; 
         }

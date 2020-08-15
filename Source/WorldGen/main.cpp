@@ -209,12 +209,14 @@ void Main::Init()
     scene->AddSystem(new OrbitSystem()); 
     scene->AddSystem(new LODSystem()); 
 
+    Shader* basicShader = Shader::Load("Basic"); 
+
     Mesh* mesh = Mesh::CreateCube(); 
     Material* mat = new Material(); 
-    mat->SetShader(Shader::Load("Basic")); 
+    mat->SetShader(basicShader); 
 
     Material* lightMat = new Material(); 
-    lightMat->SetShader(Shader::Load("Basic")); 
+    lightMat->SetShader(basicShader); 
     lightMat->SetVector4("fj_Emissive", {1.0, 1.0, 1.0, 1.0}); 
 
     GetWindow()->SetVSync(false); 
@@ -256,15 +258,55 @@ void Main::Init()
         Entity e = scene->CreateEntity(); 
         auto& tfm = scene->GetComponent<Transform>(e); 
         auto& cam = scene->AddComponent<Camera>(e); 
-        // auto& light = scene->AddComponent<Light>(e); 
         scene->AddComponent<FPSCamera>(e); 
         
         tfm.SetPosition(Vector3::Backward * 20); 
         cam.SetFOV(70.0f); 
 
+        // auto& light = scene->AddComponent<Light>(e); 
         // light.SetType(LightType::Point); 
         // light.SetColor(Color::White); 
         // light.SetRadius(100.0f); 
+    }
+
+    {
+        Random r; 
+        // stars 
+        Entity e = scene->CreateEntity(); 
+        auto& mc = scene->AddComponent<MeshContainer>(e); 
+
+        Mesh* mesh = new Mesh(); 
+        mesh->SetPrimitive(Primitive::Points); 
+
+        Ref<MeshData> data = new MeshData(); 
+        Vector<Vector3>& verts = data->Vertices; 
+        Vector<Vector4>& colors = data->Colors; 
+        verts.resize(1000); 
+        colors.resize(1000); 
+        // for (int i = 0; i < 100000; i++) 
+        float theta, phi; 
+        for (int i = 0; i < 1000; i++) 
+        {
+            // FJ_DEBUG("%f", r.NextFloat()); 
+            theta = 2 * FJ_PI * r.NextFloat(); 
+            phi = std::acos(2 * r.NextFloat() - 1.0f); 
+            verts[i] = Normalized(Vector3(
+                std::cos(theta) * std::sin(phi), 
+                std::sin(theta) * std::sin(phi), 
+                std::cos(phi) 
+            )) * 900; 
+            // verts[i] = Normalized(Quaternion::AxisAngle(Normalized(Vector3(
+            //     r.NextFloat(), 
+            //     r.NextFloat(), 
+            //     r.NextFloat()
+            // )), r.NextFloat() * FJ_2_PI) * Vector3::Right) * 900; 
+            colors[i] = {1, 1, 1, 1}; 
+        } 
+        data->Apply(mesh); 
+        data = nullptr; 
+
+        mc.SetMesh(mesh); 
+        mc.SetMaterial(lightMat); 
     }
 }
 
@@ -290,7 +332,7 @@ void Main::PreUpdate(float dt)
 
 void Main::PreRender() 
 {
-    GetRenderer()->SetAmbientColor(Vector4(Vector3(1) * 0.1, 1.0)); 
+    GetRenderer()->SetAmbientColor(Vector4(Vector3(1) * 0.0, 1.0)); 
 }
 
 void Main::PostRender() 

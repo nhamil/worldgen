@@ -51,7 +51,7 @@ void WorldGenSystem::UpdateGUI()
             if (gen || planet.Empty) //UI::Button("Generate")) 
             {
                 planet.Empty = false; 
-                planet.GenThread = new WorldGenThread(8); 
+                planet.GenThread = new WorldGenThread(7); 
                 planet.GenThread->Start(); 
             }
         }

@@ -19,5 +19,17 @@ public:
     FaceNode* Poll(); 
 
 private: 
+    Mutex Lock_; 
     Vector<FaceNodeMeshRequest> MeshRequests_; 
+};
+
+class FaceNodeGenThread : public Thread 
+{
+public: 
+    FaceNodeGenThread(FaceNodeQueue* queue); 
+
+    virtual void Run() override; 
+
+private: 
+    FaceNodeQueue* Queue_; 
 };

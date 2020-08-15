@@ -64,7 +64,7 @@ namespace Fjord
         Ref<PostProcessPipeline> PPPipeline_; 
         Ref<RenderTargetSwap> RTSwap_; 
         Color AmbientColor_; 
-        Vector<MeshRenderData> Meshes_; 
+        Vector<MeshRenderData> OpaqueMeshes_, TransparentMeshes_, TranslucentMeshes_; 
         Vector<LightRenderData> Lights_; 
         Vector<CameraRenderData> Cameras_; 
     };

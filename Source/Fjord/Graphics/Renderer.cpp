@@ -46,7 +46,9 @@ namespace Fjord
 
     void Renderer::BeginFrame() 
     {
-        Meshes_.clear(); 
+        OpaqueMeshes_.clear(); 
+        TransparentMeshes_.clear();  
+        TranslucentMeshes_.clear();  
         Lights_.clear(); 
         Cameras_.clear(); 
 
@@ -70,8 +72,8 @@ namespace Fjord
 
         // GLCALL(glBindFramebuffer(GL_FRAMEBUFFER, RenderTarget_->GetHandle())); 
         // graphics->GetAPI()->BindFramebuffer(RenderTarget_->GetHandle(), RenderTarget_->GetHandle()); 
-        graphics->SetClearColor(Color(0.6, 0.8, 1.0)); 
-        // graphics->SetClearColor(Color(0, 0, 0)); 
+        // graphics->SetClearColor(Color(0.6, 0.8, 1.0)); 
+        graphics->SetClearColor(Color(0, 0, 0)); 
         RTSwap_->Clear(); 
         graphics->SetRenderTarget(RTSwap_->GetDest()); 
         graphics->ResetViewport(); 
@@ -88,6 +90,8 @@ namespace Fjord
             Matrix4 camTfm = cam.Transform; 
             Matrix3 camNorm = Matrix3(Transpose(Inverse(camTfm))); 
 
+            // GLCALL(glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)); 
+
             bool first = true; 
             for (LightRenderData& light : Lights_) 
             {
@@ -99,7 +103,7 @@ namespace Fjord
                 {
                     graphics->SetBlendMode(BlendMode::One, BlendMode::One); 
                 }
-                for (MeshRenderData& instance : Meshes_) 
+                for (MeshRenderData& instance : OpaqueMeshes_) 
                 {
                     Mesh* mesh = instance.Mesh; 
                     Material* mat = instance.Material; 
@@ -152,6 +156,71 @@ namespace Fjord
                     }
                 }
                 first = false; 
+            }
+
+            GLCALL(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)); 
+
+            // TODO transparent here 
+
+            // GLCALL(glDisable(GL_CULL_FACE)); 
+
+            // translucent 
+            for (LightRenderData& light : Lights_) 
+            {
+                graphics->SetBlendMode(BlendMode::SourceAlpha, BlendMode::OneMinusSourceAlpha); 
+
+                for (MeshRenderData& instance : TranslucentMeshes_) 
+                {
+                    Mesh* mesh = instance.Mesh; 
+                    Material* mat = instance.Material; 
+                    Shader* shader = mat->GetShader(); 
+
+                    Matrix4 modelView = cam.Transform * instance.Transform; 
+                    Matrix3 normalMat = Matrix3(Transpose(Inverse(modelView))); 
+
+                    shader->SetTextureUnit("fj_MainTex", 0); 
+                    graphics->SetTexture(0, WhiteTexture_); 
+
+                    for (auto it : shaderInfo.ReservedTextureUnits) 
+                    {
+                        shader->SetTextureUnit(it.first, it.second); 
+                        Texture* tex = mat->GetTexture(it.first); 
+                        if (!tex) tex = WhiteTexture_; 
+                        graphics->SetTexture(it.second, tex); 
+                    }
+
+                    mat->ApplyParameters(shaderInfo); 
+
+                    shader->SetMatrix4("fj_Projection", cam.Projection); 
+                    shader->SetMatrix4("fj_ModelView", modelView); 
+                    shader->SetMatrix3("fj_NormalMatrix", normalMat); 
+
+                    shader->SetVector4("fj_LightData.Ambient", first ? AmbientColor_ : Color::Black); 
+                    shader->SetVector4("fj_LightData.Color", light.LightData.GetColor()); 
+                    shader->SetVector3("fj_LightData.Position", TransformVector(camTfm, light.Position, true)); 
+                    shader->SetVector3("fj_LightData.Direction", camNorm * light.Direction); 
+                    shader->SetInt("fj_LightData.Type", (int) light.LightData.GetType()); 
+                    shader->SetFloat("fj_LightData.Radius", light.LightData.GetRadius()); 
+
+                    graphics->SetShader(shader); 
+                    graphics->SetGeometry(mesh->GetGeometry()); 
+                    if (mesh->HasIndices()) 
+                    {
+                        graphics->DrawIndexed(
+                            mesh->GetPrimitive(), 
+                            0, 
+                            mesh->GetIndexCount()
+                        );
+                    }
+                    else 
+                    {
+                        graphics->Draw(
+                            mesh->GetPrimitive(), 
+                            0, 
+                            mesh->GetVertexCount()
+                        );
+                    }
+                }
             }
         }
 
@@ -208,7 +277,21 @@ namespace Fjord
         data.Transform = tfm; 
         data.Mesh = mesh; 
         data.Material = mat; 
-        Meshes_.push_back(data); 
+
+        switch (mat->GetRenderQueue()) 
+        {
+            case RenderQueue::Opaque: 
+                OpaqueMeshes_.push_back(data); 
+                break; 
+            case RenderQueue::Transparent: 
+                TransparentMeshes_.push_back(data); 
+                break; 
+            case RenderQueue::Translucent: 
+                TranslucentMeshes_.push_back(data); 
+                break; 
+            default: 
+                FJ_EFERROR("Invalid render queue: %d", mat->GetRenderQueue()); 
+        }
     }
 
 }

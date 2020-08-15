@@ -4,11 +4,13 @@
 
 void FaceNodeQueue::Add(FaceNode* node) 
 {
+    MutexLock lock(Lock_); 
     MeshRequests_.push_back({node}); 
 }
 
 void FaceNodeQueue::Remove(FaceNode* node) 
 {
+    MutexLock lock(Lock_); 
     for (unsigned i = 0; i < MeshRequests_.size(); i++) 
     {
         if (MeshRequests_[i].Node == node) 
@@ -21,6 +23,7 @@ void FaceNodeQueue::Remove(FaceNode* node)
 
 void FaceNodeQueue::Sort(Vector3 pos) 
 {
+    MutexLock lock(Lock_); 
     std::sort(MeshRequests_.begin(), MeshRequests_.end(), [&](FaceNodeMeshRequest& a, FaceNodeMeshRequest& b) 
     {
         if (a.Node->GetLOD() == b.Node->GetLOD()) 
@@ -37,6 +40,7 @@ void FaceNodeQueue::Sort(Vector3 pos)
 
 FaceNode* FaceNodeQueue::Peek() 
 {
+    MutexLock lock(Lock_); 
     if (MeshRequests_.size()) 
     {
         return MeshRequests_[0].Node; 
@@ -46,6 +50,7 @@ FaceNode* FaceNodeQueue::Peek()
 
 FaceNode* FaceNodeQueue::Poll() 
 {
+    MutexLock lock(Lock_); 
     if (MeshRequests_.size()) 
     {
         FaceNode* node = MeshRequests_[0].Node; 
@@ -53,4 +58,27 @@ FaceNode* FaceNodeQueue::Poll()
         return node; 
     }
     return nullptr; 
+}
+
+FaceNodeGenThread::FaceNodeGenThread(FaceNodeQueue* queue) 
+    : Queue_(queue) {} 
+
+void FaceNodeGenThread::Run() 
+{
+    while (!IsInterrupted()) 
+    {
+        FaceNode* node = Queue_->Poll(); 
+
+        if (node) 
+        {
+            // FJ_FDEBUG("Generating node %d", node->GetLOD()); 
+            node->Generate(); 
+        }
+        else 
+        {
+            // FJ_FDEBUG("Waiting for node"); 
+        }
+
+        Sleep(1); 
+    }
 }
