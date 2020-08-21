@@ -1,5 +1,6 @@
 #include "WorldGen/LOD/FaceNode.h" 
 
+#include "WorldGen/Noise.h" 
 #include "WorldGen/LOD/FaceNodeQueue.h" 
 
 static Ref<Material> s_Material; 
@@ -14,7 +15,11 @@ FaceNode::FaceNode(FaceNodeQueue* queue, World* world, FaceIndex face, unsigned 
     , BottomLeft_(bl) 
     , BottomRight_(br) 
 {
-    Center_ = (TopLeft_ + TopRight_ + BottomLeft_ + BottomRight_) * 0.25; 
+    TopLeft_ = Normalized(TopLeft_); 
+    TopRight_ = Normalized(TopRight_); 
+    BottomLeft_ = Normalized(BottomLeft_); 
+    BottomRight_ = Normalized(BottomRight_); 
+    Center_ = Normalized(TopLeft_ + TopRight_ + BottomLeft_ + BottomRight_);// * 0.25; 
 
     // FJ_FDEBUG("Creating Child FaceNode (World:%p, Face:%d, LOD:%u)", world, face, lod); 
 }
@@ -68,7 +73,11 @@ FaceNode::FaceNode(FaceNodeQueue* queue, World* world, FaceIndex face)
             FJ_FWARN("Unknown face index: %d", face); 
     }
 
-    Center_ = (TopLeft_ + TopRight_ + BottomLeft_ + BottomRight_) * 0.25; 
+    TopLeft_ = Normalized(TopLeft_); 
+    TopRight_ = Normalized(TopRight_); 
+    BottomLeft_ = Normalized(BottomLeft_); 
+    BottomRight_ = Normalized(BottomRight_); 
+    Center_ = Normalized(TopLeft_ + TopRight_ + BottomLeft_ + BottomRight_);// * 0.25; 
 
     for (unsigned i = 0; i < 4; i++) 
     {
@@ -109,10 +118,36 @@ bool FaceNode::HasChildren() const
     return false; 
 }
 
+static float s_Radius[] = {
+    INFINITY, 
+    160.0, 
+    80.0, 
+    40.0, 
+    20.0, 
+    10.0, 
+    5.0, 
+    2.5, 
+    1.25, 
+    0.75, 
+    0.325, 
+    0.1625, 
+    0.08125, 
+    0.040625, 
+
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    4.0, 
+    2.0, 
+    1.0, 
+    0.5, 
+    0.25,
+    0.125, 
+    0.0625, 
+    0.03125, 
+    0.015625
+};
+
 int FaceNode::Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode*>& childQueue) 
 {
-    Vector3 center = Center_; 
-
     const float BaseDist = 180.0; 
 
     int meshesBuilt = 0; 
@@ -126,10 +161,19 @@ int FaceNode::Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode
                 Mat_ = new Material(); 
                 Mat_->SetShader(s_Material->GetShader()); 
 
+                WaterMat_ = new Material(); 
+                WaterMat_->SetShader(s_Material->GetShader()); 
+
                 Mesh_ = new Mesh(); 
                 MeshData_->Apply(Mesh_); 
                 Mesh_->CalculateNormals(); 
+
+                WaterMesh_ = new Mesh(); 
+                WaterMeshData_->Apply(WaterMesh_); 
+                WaterMesh_->CalculateNormals(); 
+
                 MeshData_ = nullptr; 
+                WaterMeshData_ = nullptr; 
                 MeshDataReady_ = false; 
                 meshesBuilt++; 
             }
@@ -137,17 +181,22 @@ int FaceNode::Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode
         }
     }
 
-    // float dist = Length(camPosition - center); 
-    float dist = Angle(camPosition, center) * FJ_TO_DEG; 
+    float dist = Angle(camPosition, GetCenter()) * FJ_TO_DEG; 
+    //Length2(camPosition - GetCenter()); 
+    // float dist = Angle(camPosition, GetCenter()) * FJ_TO_DEG; 
     bool prevClose = CloseEnough_; 
 
     if (LOD_ > 0) 
     {
-        CloseEnough_ = dist < (BaseDist / (LOD_)); 
+        // CloseEnough_ = dist < (BaseDist / (LOD_)); 
+        CloseEnough_ = dist < (s_Radius[LOD_]); 
         // FJ_DEBUG("%f %f", dist, BaseDist / (LOD_ * LOD_)); 
     }
 
-    if (LOD_ > 1 && dist > (4 * BaseDist / (LOD_))) 
+    // if (LOD_ > 0 && CloseEnough_) FJ_DEBUG("close: %d %f", LOD_, dist); 
+
+    // if (LOD_ > 1 && dist > (4 * BaseDist / (LOD_))) 
+    if (LOD_ > 1 && dist > (4 * s_Radius[LOD_])) 
     {
         for (unsigned i = 0; i < 4; i++) 
         {
@@ -173,14 +222,16 @@ int FaceNode::Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode
         }
     }
 
-    if (CanRender()) 
+    // if (CanRender()) 
+    if ((LOD_ == 0 || dist < (s_Radius[LOD_ - 1])) && LOD_ < 16)
     {
         Vector3 top = (TopLeft_ + TopRight_) * 0.5; 
         Vector3 bottom = (BottomLeft_ + BottomRight_) * 0.5; 
         Vector3 left = (TopLeft_ + BottomLeft_) * 0.5; 
         Vector3 right = (TopRight_ + BottomRight_) * 0.5; 
+        Vector3 center = (TopLeft_ + TopRight_ + BottomLeft_ + BottomRight_) * 0.25; 
 
-        if (CloseEnough_ && LOD_ < 7) 
+        if (CloseEnough_) 
         {
             if (!Children_[0]) Children_[0] = new FaceNode(NodeQueue_, World_, Face_, LOD_+1, TopLeft_, top, left, center); 
             if (!Children_[1]) Children_[1] = new FaceNode(NodeQueue_, World_, Face_, LOD_+1, top, TopRight_, center, right); 
@@ -194,7 +245,7 @@ int FaceNode::Update(const Vector3& camPosition, bool buildMesh, Vector<FaceNode
         CloseEnough_ = true; 
     }
 
-    if (!Requested_ && CloseEnough_) 
+    if (!Requested_)// && CloseEnough_) 
     {
         NodeQueue_->Add(this); 
         Requested_ = true; 
@@ -232,7 +283,7 @@ void FaceNode::Render(Transform& tfm)
         if (render) 
         {
             GetRenderer()->DrawMesh(Mesh_, Mat_, tfm.GetMatrix()); 
-            // GetRenderer()->DrawMesh(WaterMesh_, WaterMat_, tfm.GetMatrix()); 
+            GetRenderer()->DrawMesh(WaterMesh_, WaterMat_, tfm.GetMatrix()); 
         }
         else 
         {
@@ -247,6 +298,7 @@ void FaceNode::Render(Transform& tfm)
 void FaceNode::Generate() 
 {
     static const unsigned Resolution = 32; 
+    static const float InvResolution = 1.0 / Resolution; 
     static const unsigned VertexSize = Resolution * Resolution; 
     static const unsigned IndexSize = (Resolution-1) * (Resolution-1) * 6; 
 
@@ -264,6 +316,19 @@ void FaceNode::Generate()
     colors.resize(VertexSize); 
     texCoords.resize(VertexSize); 
     inds.resize(IndexSize); 
+
+    WaterMeshData_ = new MeshData(); 
+    auto& wverts = WaterMeshData_->Vertices; 
+    auto& wnormals = WaterMeshData_->Normals; 
+    auto& wcolors = WaterMeshData_->Colors; 
+    auto& wtexCoords = WaterMeshData_->TexCoords; 
+    auto& winds = WaterMeshData_->Indices; 
+
+    wverts.resize(VertexSize); 
+    wnormals.resize(VertexSize); 
+    wcolors.resize(VertexSize); 
+    wtexCoords.resize(VertexSize); 
+    winds.resize(IndexSize); 
 
     // Vector<Vector3> verts(VertexSize); 
     // Vector<Vector4> colors(VertexSize); 
@@ -284,8 +349,8 @@ void FaceNode::Generate()
         unsigned x = i % Resolution; 
         unsigned y = i / Resolution; 
 
-        float fx = (float) x / (Resolution-1); 
-        float fy = (float) y / (Resolution-1); 
+        float fx = (float) (x - InvResolution) / (Resolution-3); 
+        float fy = (float) (y - InvResolution) / (Resolution-3); 
 
         Vector3 pos = Normalized(Lerp(
             Lerp(TopLeft_, TopRight_, fx), 
@@ -293,32 +358,51 @@ void FaceNode::Generate()
             fy
         )); 
 
-        CellId cCell = World_->GetCellIdPyPosition(pos); 
+        float freq = 2.0; 
+        float pers = 0.65; 
+        int iterations = 9; 
+        Vector3 offset = {
+            FractalNoise(pos, freq, pers, iterations, 0), 
+            FractalNoise(pos, freq, pers, iterations, 1), 
+            FractalNoise(pos, freq, pers, iterations, 2)
+        }; 
+        offset *= 0.4; 
 
-        TriCellId tri = World_->GetTriCellIdPyPosition(pos); 
+        Vector3 cellPos = Normalized(pos + offset); 
+
+        float heightOffset = FractalNoise(cellPos, freq, pers, iterations+5, 3); 
+        // float height = 1.0 + heightOffset * 0.01; 
+        // Terrain terrain = height > 1.0 ? Terrain::Grassland : Terrain::DeepWater; 
+
+        // FJ_DEBUG("%f %f %f", offset.X, offset.Y, offset.Z); 
+
+        // CellId cCell = World_->GetCellIdPyPosition(pos + offset); 
+        // CellId cell = cCell; 
+
+        TriCellId tri = World_->GetTriCellIdPyPosition(pos + offset); 
         tri.Coords = Smooth(tri.Coords); 
         tri.Coords *= 1.0 / (tri.Coords.X + tri.Coords.Y + tri.Coords.Z); 
         // tri.Coords = Vector3(1.0, 0.0, 0.0); 
         CellId cell = tri.A; 
 
-        // float height = World_->GetHeight(cell); 
+        // float height = 1.0 + Max(0.0f, World_->GetHeight(cell) * (1.0f + 1.0f * heightOffset) - 0.57f) * 0.1; 
         float height = tri.Interpolate<float>([&](CellId id) 
         { 
-            return 1.0 + Max(0.0f, World_->GetHeight(id) - 0.57f) * 0.01; 
+            return 1.0 + Max(-10.0f, World_->GetHeight(id) * (1.0f + heightOffset * 0.5f) - 0.57f) * 0.04; 
         }); 
 
         // height = 1.0 + (height - 0.57f) * 0.15; 
 
         Terrain terrain = World_->GetTerrain(cell); 
 
-        Color landTerrain = tri.Interpolate<Vector4>([&](CellId id) -> Vector4 {
-            Terrain t = World_->GetTerrain(id); 
-            Color colors[] = {
-                GetTerrainColor(Terrain::Desert), 
-                GetTerrainColor(t)
-            };
-            return GetTerrainColor(t);//colors[IsTerrainLand(t)]; 
-        });
+        // Color landTerrain = tri.Interpolate<Vector4>([&](CellId id) -> Vector4 {
+        //     Terrain t = World_->GetTerrain(id); 
+        //     Color colors[] = {
+        //         GetTerrainColor(Terrain::Desert), 
+        //         GetTerrainColor(t)
+        //     };
+        //     return GetTerrainColor(t);//colors[IsTerrainLand(t)]; 
+        // });
 
         // Color waterTerrain = tri.Interpolate<Vector4>([&](CellId id) -> Vector4 {
         //     Terrain t = World_->GetTerrain(id); 
@@ -330,17 +414,18 @@ void FaceNode::Generate()
         // });
 
         // float height = 1.0; 
-        // Color landTerrain = Color::Black; 
+        Color landTerrain = GetTerrainColor(IsTerrainWater(terrain) ? Terrain::Desert : terrain); 
+        Color waterTerrain = GetTerrainColor(terrain == Terrain::DeepWater ? Terrain::DeepWater : Terrain::ShallowWater); 
 
-        verts[i] = pos * height; 
+        verts[i] = pos * (height); 
         colors[i] = landTerrain; 
         normals[i] = pos; 
         texCoords[i] = {fx, fy}; 
 
-        // wverts[i] = pos * 1.0; 
-        // wcolors[i] = waterTerrain; 
-        // wnormals[i] = pos; 
-        // wtexCoords[i] = {fx, fy}; 
+        wverts[i] = pos * 1.0; 
+        wcolors[i] = waterTerrain; 
+        wnormals[i] = pos; 
+        wtexCoords[i] = {fx, fy}; 
     }
 
     // FJ_FDEBUG("Anomalies: %d", anomalies); 
@@ -363,12 +448,12 @@ void FaceNode::Generate()
             inds[i + 4] = v11; 
             inds[i + 5] = v10; 
 
-            // winds[i + 0] = v00; 
-            // winds[i + 1] = v01; 
-            // winds[i + 2] = v11; 
-            // winds[i + 3] = v00; 
-            // winds[i + 4] = v11; 
-            // winds[i + 5] = v10; 
+            winds[i + 0] = v00; 
+            winds[i + 1] = v01; 
+            winds[i + 2] = v11; 
+            winds[i + 3] = v00; 
+            winds[i + 4] = v11; 
+            winds[i + 5] = v10; 
         }
     }
 

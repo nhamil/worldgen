@@ -68,6 +68,6 @@ private:
     Vector3 BottomRight_; 
     bool CloseEnough_ = false; 
     Mutex Lock_; 
-    Ref<MeshData> MeshData_; 
+    Ref<MeshData> MeshData_, WaterMeshData_; 
     bool MeshDataReady_ = false; 
 };

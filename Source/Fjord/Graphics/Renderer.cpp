@@ -250,8 +250,8 @@ namespace Fjord
         data.Projection = Matrix4::Perspective(
             cam->GetFOV() * FJ_TO_RAD, 
             graphics->GetAspectRatio(), 
-            0.1f, 
-            1000.0f
+            0.00001f, 
+            500.0f
         );
         data.Transform = tfm; 
         Cameras_.push_back(data);

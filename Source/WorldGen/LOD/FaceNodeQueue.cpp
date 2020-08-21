@@ -6,6 +6,7 @@ void FaceNodeQueue::Add(FaceNode* node)
 {
     MutexLock lock(Lock_); 
     MeshRequests_.push_back({node}); 
+    // FJ_DEBUG("add to queue"); 
 }
 
 void FaceNodeQueue::Remove(FaceNode* node) 
@@ -28,8 +29,27 @@ void FaceNodeQueue::Sort(Vector3 pos)
     {
         if (a.Node->GetLOD() == b.Node->GetLOD()) 
         {
-            // return Length2(pos - a.Node->GetCenter()) < Length2(pos - b.Node->GetCenter()); 
-            return Angle(pos, a.Node->GetCenter()) < Angle(pos, b.Node->GetCenter()); 
+            return Length2(pos - a.Node->GetCenter()) < Length2(pos - b.Node->GetCenter()); 
+            // return Angle(pos, a.Node->GetCenter()) < Angle(pos, b.Node->GetCenter()); 
+        }
+        else 
+        {
+            return a.Node->GetLOD() < b.Node->GetLOD(); 
+        }
+    }); 
+    LastPos_ = pos; 
+}
+
+void FaceNodeQueue::Sort() 
+{
+    MutexLock lock(Lock_); 
+    Vector3 pos = LastPos_; 
+    std::sort(MeshRequests_.begin(), MeshRequests_.end(), [&](FaceNodeMeshRequest& a, FaceNodeMeshRequest& b) 
+    {
+        if (a.Node->GetLOD() == b.Node->GetLOD()) 
+        {
+            return Length2(pos - a.Node->GetCenter()) < Length2(pos - b.Node->GetCenter()); 
+            // return Angle(pos, a.Node->GetCenter()) < Angle(pos, b.Node->GetCenter()); 
         }
         else 
         {
@@ -67,6 +87,7 @@ void FaceNodeGenThread::Run()
 {
     while (!IsInterrupted()) 
     {
+        Queue_->Sort(); 
         FaceNode* node = Queue_->Poll(); 
 
         if (node) 
@@ -79,6 +100,6 @@ void FaceNodeGenThread::Run()
             // FJ_FDEBUG("Waiting for node"); 
         }
 
-        Sleep(1); 
+        Sleep(100); 
     }
 }

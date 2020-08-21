@@ -48,8 +48,8 @@ namespace Fjord
         {
             Width_ = w; 
             Height_ = h; 
-            Source_ = new RenderTarget(w, h, TextureFormat::Depth24, TextureFormat::RGBA16F); 
-            Dest_ = new RenderTarget(w, h, TextureFormat::Depth24, TextureFormat::RGBA16F); 
+            Source_ = new RenderTarget(w, h, TextureFormat::Depth32, TextureFormat::RGBA16F); 
+            Dest_ = new RenderTarget(w, h, TextureFormat::Depth32, TextureFormat::RGBA16F); 
         }
     }
 

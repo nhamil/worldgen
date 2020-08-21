@@ -97,10 +97,10 @@ public:
             Quaternion rot = 
                 Quaternion::AxisAngle(Vector3::Up, cam.RotY) * 
                 Quaternion::AxisAngle(Vector3::Right, cam.RotX); 
-
+            // FJ_DEBUG("%f", Length(tfm.GetPosition()) - 1); 
             tfm.SetRotation(rot); 
             tfm.SetPosition(
-                tfm.GetPosition() + rot * move 
+                tfm.GetPosition() + rot * move * Min<float>(1.0, std::pow((Length(tfm.GetPosition())-1), 2))
             );
         }
     }
@@ -195,6 +195,7 @@ void Main::Init()
     auto* scene = GetScene(); 
 
     auto* pipeline = GetRenderer()->GetPostProcessPipeline(); 
+    // pipeline->AddEffect<BloomEffect>(); 
 
     Scene::RegisterComponent<FPSCamera>(); 
     Scene::RegisterComponent<RotateTag>(); 
@@ -263,10 +264,10 @@ void Main::Init()
         tfm.SetPosition(Vector3::Backward * 20); 
         cam.SetFOV(70.0f); 
 
-        // auto& light = scene->AddComponent<Light>(e); 
-        // light.SetType(LightType::Point); 
-        // light.SetColor(Color::White); 
-        // light.SetRadius(100.0f); 
+        auto& light = scene->AddComponent<Light>(e); 
+        light.SetType(LightType::Point); 
+        light.SetColor(Color::White); 
+        light.SetRadius(100.0f); 
     }
 
     {

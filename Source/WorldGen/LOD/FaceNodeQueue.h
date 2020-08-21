@@ -14,6 +14,7 @@ public:
     void Remove(FaceNode* node); 
 
     void Sort(Vector3 pos); 
+    void Sort(); 
 
     FaceNode* Peek(); 
     FaceNode* Poll(); 
@@ -21,6 +22,7 @@ public:
 private: 
     Mutex Lock_; 
     Vector<FaceNodeMeshRequest> MeshRequests_; 
+    Vector3 LastPos_; 
 };
 
 class FaceNodeGenThread : public Thread 

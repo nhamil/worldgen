@@ -84,7 +84,7 @@ void WorldGenSystem::Render()
     {
         auto& planet = scene->GetComponent<Planet>(e); 
         auto& tfm = scene->GetComponent<Transform>(e); 
-        tfm.SetScale(Vector3(10)); 
+        // tfm.SetScale(Vector3(10)); 
 
         if (planet.CellMesh) 
         {
