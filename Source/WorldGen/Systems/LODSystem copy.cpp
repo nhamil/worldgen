@@ -5,13 +5,23 @@
 static Ref<Material> s_AtmosMaterial; 
 static Ref<Mesh> s_AtmosMesh; 
 
-static bool s_Render = true; 
+static const unsigned NumGenThreads = 8; 
+static Ref<FaceNodeGenThread> s_Threads[NumGenThreads]; 
 
 LODSystem::LODSystem() 
 {
     IncludeComponent<Transform>(); 
     IncludeComponent<Planet>(); 
     IncludeComponent<LODSphere>(); 
+
+    NodeQueue_ = new FaceNodeQueue(); 
+    LastGen_ = GetTimeSeconds(); 
+
+    for (unsigned i = 0; i < NumGenThreads; i++) 
+    {
+        s_Threads[i] = new FaceNodeGenThread(NodeQueue_); 
+        s_Threads[i]->Start(); 
+    }
 
     if (!s_AtmosMaterial) 
     {
@@ -71,33 +81,6 @@ LODSystem::LODSystem()
     }
 }
 
-static unsigned MaxLOD = 5;
-// static float s_LOD[MaxLOD];
-// {
-//     2.0, 
-//     1.0, 
-//     0.5, 
-//     0.25, 
-//     0.125, 
-//     0.0625, 
-//     0.03125, 
-//     0.015125, 
-//     0.0 
-// }; 
-
-static float minHeight = 0.98; 
-static float maxHeight = 1.02; 
-
-void LODSystem::UpdateGUI() 
-{
-    UI::SliderFloat("MinHeight", &minHeight, 0.5, 1.0); 
-    UI::SliderFloat("MaxHeight", &maxHeight, 1.0, 2.0); 
-    for (unsigned i = 0; i < MaxLOD; i++) 
-    {
-        // UI::SliderFloat("LOD " + ToString(i+1) + " Range", &s_LOD[i], 0, 1); 
-    }
-}
-
 void LODSystem::Update(float dt) 
 {
     auto* scene = GetScene(); 
@@ -109,46 +92,58 @@ void LODSystem::Update(float dt)
 
     int meshesAllowed = 2; 
 
-    Vector<float> ranges; 
-    for (unsigned i = 0; i < MaxLOD; i++) 
-    {
-        // ranges.push_back(s_LOD[i]); 
-        ranges.push_back(
-            4.0 / std::pow(2.0, i)
-        );
-    }
+    Vector<FaceNode*> faceNodes; 
 
     for (Entity e : GetEntities()) 
     {
-        auto& tfm = scene->GetComponent<Transform>(e); 
         auto& planet = scene->GetComponent<Planet>(e); 
         auto& lodSphere = scene->GetComponent<LODSphere>(e); 
 
-        // if (planet.World) 
+        for (unsigned face = 0; face < FaceIndexCount; face++) 
         {
-            // planet.World->UpdateSpatialGeometry(); 
-
-            if (!lodSphere.QuadTree) 
+            if (planet.World) 
             {
-                lodSphere.QuadTree = new SphereQuadTree(ranges); 
+                planet.World->UpdateSpatialGeometry(); 
+                if (!lodSphere.Nodes[face] || planet.World != lodSphere.Nodes[face]->GetWorld()) 
+                {
+                    lodSphere.Nodes[face] = new FaceNode(NodeQueue_, planet.World, (FaceIndex) face); 
+                    // lodSphere.Nodes[face]->Generate(); 
+                }
+                else 
+                {
+                    // meshesAllowed -= lodSphere.Nodes[face]->Update(camPos, meshesAllowed > 0, faceNodes); 
+                    faceNodes.push_back(lodSphere.Nodes[face]); 
+                }
             }
             else 
             {
-                for (unsigned i = 0; i < MaxLOD; i++) 
-                {
-                    lodSphere.QuadTree->SetLODRange(i+1, ranges[i]); 
-                }
+                lodSphere.Nodes[face] = nullptr; 
             }
-
-            // lodSphere.QuadTree->Update(Normalized(camPos - tfm.GetPosition())); 
         }
     }
+
+    for (unsigned i = 0; i < faceNodes.size(); i++) 
+    {
+        meshesAllowed -= faceNodes[i]->Update(camPos, meshesAllowed > 0, faceNodes); 
+    }
+
+    NodeQueue_->Sort(camPos); 
+
+    // if (GetTimeSeconds() - LastGen_ > 0.0) 
+    // {
+    //     NodeQueue_->Sort(camPos); 
+    //     FaceNode* node = NodeQueue_->Poll(); 
+    //     if (node) 
+    //     {
+    //         // FJ_EFDEBUG("%u", node->GetLOD()); 
+    //         node->Generate(); 
+    //         LastGen_ = GetTimeSeconds(); 
+    //     }
+    // }
 }
 
 void LODSystem::Render() 
 {
-    if (!s_Render) return; 
-
     auto* scene = GetScene(); 
     auto* renderer = GetRenderer(); 
 
@@ -164,11 +159,22 @@ void LODSystem::Render()
             tfm.GetMatrix()
         );
 
-        // if (lodSphere.QuadTree) 
-        // {
-        //     lodSphere.QuadTree->MinHeight_ = minHeight; 
-        //     lodSphere.QuadTree->MaxHeight_ = maxHeight; 
-        //     lodSphere.QuadTree->Render(tfm.GetMatrix()); 
-        // }
+        for (unsigned face = 0; face < FaceIndexCount; face++) 
+        {
+            if (planet.World) 
+            {
+                FaceNode* node = lodSphere.Nodes[face]; 
+                if (node && planet.World == node->GetWorld()) // && node->CanRender()) 
+                {
+                    node->Render(tfm); 
+                    // {
+                    //     Mesh* mesh = lodSphere.Nodes[face]->GetMesh(); 
+                    //     Material* mat = lodSphere.Nodes[face]->GetMaterial(); 
+                    //     mat->SetShader(s_Material->GetShader()); 
+                    //     renderer->DrawMesh(mesh, mat, tfm.GetMatrix()); 
+                    // }
+                }
+            }
+        }
     }
 }

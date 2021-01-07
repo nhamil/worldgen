@@ -56,9 +56,11 @@ namespace Fjord
             g_Window->Poll(); 
             // g_GUI->HandleUpdate(skipUpdates); 
             UI::StartFrame(); 
+            UI::BeginWindow("Debug", UI::WindowFlag::WindowFlagAutoResize); 
             g_App->PreUpdateGUI(); 
             g_Scene->UpdateGUI(); 
             g_App->PostUpdateGUI(); 
+            UI::EndWindow(); 
             bool mouseDown = GetInput()->GetButton(1); 
             // TODO quick hack to stop game from using mouse when UI is using it 
             if (UI::HasActiveWidget()) GetInput()->OnMouseUp(1); 

@@ -15,7 +15,7 @@ public:
     virtual void Run() override; 
 
     Ref<World> World; 
-    Ref<MeshData> CellMeshData; 
+    Ref<MeshData> CellMeshData, EdgeMeshData; 
 
 private: 
     void GenWorld(); 

@@ -35,6 +35,40 @@ void WorldGenThread::GenMeshData()
         neighborCount += World->GetNeighborCount(i); 
     }
 
+    // edges 
+    {
+        EdgeMeshData = new MeshData(); 
+        Vector<Vector3>& verts = EdgeMeshData->Vertices; 
+        Vector<Vector4>& colors = EdgeMeshData->Colors; 
+        Vector<uint32>& inds = EdgeMeshData->Indices; 
+        verts.resize(neighborCount); 
+        colors.resize(neighborCount); 
+        inds.resize(neighborCount * 2); 
+        // for (CellId i = 0; i < World.GetCellCount(); i++) 
+        ParallelFor(CellId(0), CellId(World->GetCellCount()), [&](CellId i)
+        {
+            Vector<Vector3> bounds = World->GetBounds(i); 
+            unsigned start = neighborIndex[i]; //verts.size(); 
+            unsigned index = start; 
+            for (Vector3& v : bounds) 
+            {
+                verts[index] = v*1.0001; 
+                colors[index++] = {0, 0, 0, 1}; 
+            }
+
+            index = start; 
+
+            unsigned ind = neighborIndex[i] * 2; 
+            for (unsigned v = 0; v < bounds.size() - 1; v++) 
+            {
+                inds[ind++] = (index++); 
+                inds[ind++] = (index); 
+            }
+            inds[ind++] = (start); 
+            inds[ind++] = (start+bounds.size()-1); 
+        }); 
+    }
+
     // cells 
     {
         CellMeshData = new MeshData(); 
@@ -62,7 +96,7 @@ void WorldGenThread::GenMeshData()
             for (Vector3& v : bounds) 
             {
                 verts[index] = v; 
-                normals[index] = normal; 
+                normals[index] = Normalized(v); 
                 colors[index++] =  GetTerrainColor(World->GetTerrain(i)); 
                 GeoCoords gc = GetGeoCoordsFromPosition(v); 
                 // tex[index] = {gc.Longitude / 360 + 0.5f, gc.Latitude / 180 + 0.5f}; 

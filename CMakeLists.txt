@@ -17,6 +17,7 @@ set(SOURCES
     ${WORLDGEN_SOURCE_FOLDER}/WorldGenThread.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/LOD/FaceNode.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/LOD/FaceNodeQueue.cpp 
+    ${WORLDGEN_SOURCE_FOLDER}/LOD/SphereQuadTree.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/Systems/LODSystem.cpp 
     ${WORLDGEN_SOURCE_FOLDER}/Systems/WorldGenSystem.cpp 
 

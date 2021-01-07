@@ -4,7 +4,7 @@
 
 #include "WorldGen/World.h" 
 #include "WorldGen/WorldGenThread.h" 
-#include "WorldGen/LOD/FaceNode.h" 
+#include "WorldGen/LOD/SphereQuadTree.h" 
 
 using namespace Fjord; 
 
@@ -50,7 +50,7 @@ public:
 class LODSphere : public Component 
 {
 public: 
-    Ref<FaceNode> Nodes[FaceIndexCount]; 
+    Ref<SphereQuadTree> QuadTree; 
 
     LODSphere(); 
     ~LODSphere(); 

@@ -60,7 +60,7 @@ public:
         auto* scene = GetScene(); 
         auto* input = GetInput(); 
 
-        const float MoveSpeed = 10; 
+        const float MoveSpeed = 0.1; 
         const float RotSpeed = 2; 
         const float MouseSpeed = 0.0005; 
 
@@ -99,8 +99,11 @@ public:
                 Quaternion::AxisAngle(Vector3::Right, cam.RotX); 
             // FJ_DEBUG("%f", Length(tfm.GetPosition()) - 1); 
             tfm.SetRotation(rot); 
+
+            float mul = 1; //Min<float>(1.0, std::pow((Length(tfm.GetPosition())-0.99), 2)); 
+
             tfm.SetPosition(
-                tfm.GetPosition() + rot * move * Min<float>(1.0, std::pow((Length(tfm.GetPosition())-1), 2))
+                tfm.GetPosition() + rot * move * mul 
             );
         }
     }
@@ -146,6 +149,13 @@ public:
         IncludeComponent<Orbit>(); 
     }
 
+    static float Angle; 
+
+    virtual void UpdateGUI() override 
+    {
+        UI::SliderFloat("Sun Angle", &Angle, 0, 360, 0, "%0.0f"); 
+    }
+
     virtual void Update(float dt) override 
     {
         auto* scene = GetScene(); 
@@ -155,7 +165,8 @@ public:
             auto& orbit = scene->GetComponent<Orbit>(e); 
             auto& tfm = scene->GetComponent<Transform>(e); 
 
-            orbit.Angle += orbit.Speed * dt; 
+            // orbit.Angle += orbit.Speed * dt; 
+            orbit.Angle = Angle * FJ_TO_RAD; 
 
             if (scene->IsEntityValid(orbit.Orbits)) 
             {
@@ -179,6 +190,8 @@ public:
     };
 };
 
+float OrbitSystem::Angle = 180.0f; 
+
 class Main : public Application 
 {
 public: 
@@ -186,6 +199,7 @@ public:
     virtual void PreUpdate(float dt) override; 
     virtual void PreRender() override; 
     virtual void PostRender() override; 
+    virtual void PostUpdateGUI() override; 
 
     Ref<RenderTarget> RT; 
 }; 
@@ -261,13 +275,13 @@ void Main::Init()
         auto& cam = scene->AddComponent<Camera>(e); 
         scene->AddComponent<FPSCamera>(e); 
         
-        tfm.SetPosition(Vector3::Backward * 20); 
+        tfm.SetPosition(Vector3::Backward * 2); 
         cam.SetFOV(70.0f); 
 
-        auto& light = scene->AddComponent<Light>(e); 
-        light.SetType(LightType::Point); 
-        light.SetColor(Color::White); 
-        light.SetRadius(100.0f); 
+        // auto& light = scene->AddComponent<Light>(e); 
+        // light.SetType(LightType::Point); 
+        // light.SetColor(Color::White); 
+        // light.SetRadius(100.0f); 
     }
 
     {
@@ -339,6 +353,14 @@ void Main::PreRender()
 void Main::PostRender() 
 {
 
+}
+
+void Main::PostUpdateGUI() 
+{
+    if (UI::Button("Exit")) 
+    {
+        Fjord::Stop(); 
+    }
 }
 
 ENGINE_MAIN_CLASS(Main) 
